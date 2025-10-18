@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-bedtime-purple;
+  }
+
+  body {
+    @apply bg-bedtime-gradient font-child text-bedtime-cream;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-bedtime-cream;
+  }
+
+  h1 {
+    @apply text-4xl font-bold mb-4;
+  }
+
+  h2 {
+    @apply text-3xl font-bold mb-3;
+  }
+
+  h3 {
+    @apply text-2xl font-bold mb-2;
+  }
+}
+
+@layer components {
+  /* Star decoration */
+  .star {
+    @apply inline-block text-bedtime-yellow animate-pulse;
+  }
+
+  /* Card components */
+  .bedtime-card {
+    @apply bg-bedtime-purple/30 backdrop-blur-sm rounded-2xl p-6 border-2 border-bedtime-purple-light/30 shadow-xl;
+  }
+
+  .bedtime-card-header {
+    @apply text-2xl font-bold text-bedtime-yellow mb-4 flex items-center gap-2;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply bg-bedtime-yellow text-bedtime-purple-dark px-6 py-3 rounded-full font-bold text-lg
+           shadow-lg hover:bg-bedtime-yellow-light transform hover:scale-105 transition-all duration-200
+           active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-bedtime-purple-light text-bedtime-cream px-6 py-3 rounded-full font-bold text-lg
+           shadow-lg hover:bg-bedtime-purple transform hover:scale-105 transition-all duration-200
+           active:scale-95;
+  }
+
+  .btn-choice {
+    @apply w-full bg-bedtime-blue-light/50 text-bedtime-cream px-6 py-4 rounded-xl font-bold text-left
+           border-2 border-bedtime-yellow/50 hover:border-bedtime-yellow hover:bg-bedtime-blue-light/70
+           transform hover:scale-105 transition-all duration-200 shadow-md;
+  }
+
+  /* Input styles */
+  .input-bedtime {
+    @apply w-full px-4 py-3 rounded-xl bg-bedtime-blue-midnight/50 text-bedtime-cream
+           border-2 border-bedtime-purple-light/50 focus:border-bedtime-yellow focus:outline-none
+           placeholder-bedtime-cream/50;
+  }
+
+  .label-bedtime {
+    @apply block text-bedtime-cream font-bold mb-2;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    @apply inline-block w-8 h-8 border-4 border-bedtime-yellow/30 border-t-bedtime-yellow
+           rounded-full animate-spin;
+  }
+
+  /* Moon decoration */
+  .moon {
+    @apply absolute top-8 right-8 w-16 h-16 rounded-full bg-bedtime-yellow shadow-lg shadow-bedtime-yellow/50;
+  }
+
+  /* Twinkling stars background effect */
+  .stars-bg {
+    @apply relative overflow-hidden;
+  }
+
+  .stars-bg::before {
+    content: '';
+    @apply absolute inset-0 opacity-30;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, white, transparent),
+      radial-gradient(2px 2px at 60% 70%, white, transparent),
+      radial-gradient(1px 1px at 50% 50%, white, transparent),
+      radial-gradient(1px 1px at 80% 10%, white, transparent),
+      radial-gradient(2px 2px at 90% 60%, white, transparent),
+      radial-gradient(1px 1px at 33% 80%, white, transparent),
+      radial-gradient(1px 1px at 15% 15%, white, transparent);
+    background-size: 200% 200%;
+    animation: twinkle 8s ease-in-out infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Moral meter styles */
+  .moral-meter-bar {
+    @apply h-4 bg-bedtime-blue-midnight rounded-full overflow-hidden;
+  }
+
+  .moral-meter-fill {
+    @apply h-full bg-gradient-to-r from-bedtime-yellow to-bedtime-yellow-soft transition-all duration-500;
+  }
+
+  /* Scene narrative text */
+  .narrative-text {
+    @apply text-lg leading-relaxed text-bedtime-cream-warm;
+  }
+
+  /* Container */
+  .container-bedtime {
+    @apply max-w-4xl mx-auto px-4 py-8;
+  }
+}
+
+@layer utilities {
+  .text-shadow-glow {
+    text-shadow: 0 0 10px rgba(253, 180, 75, 0.5);
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+}
