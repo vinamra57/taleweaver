@@ -8,6 +8,8 @@ import {
   DURATIONS,
   GENDERS,
   MAX_INTERESTS,
+  MORAL_FOCI,
+  DEFAULT_MORAL_FOCUS,
 } from '../lib/constants';
 import {
   AgeGroup,
@@ -15,6 +17,7 @@ import {
   ChildSchema,
   DurationMin,
   Gender,
+  MoralFocus,
   StartRequest,
 } from '../lib/types';
 
@@ -77,6 +80,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
   const [formData, setFormData] = useState<ChildFormState>(() => createDefaultChildState());
   const [durationMin, setDurationMin] = useState<DurationMin>(DEFAULT_DURATION_MIN);
   const [interactive, setInteractive] = useState<boolean>(DEFAULT_INTERACTIVE);
+  const [moralFocus, setMoralFocus] = useState<MoralFocus>(DEFAULT_MORAL_FOCUS);
   const [errors, setErrors] = useState<FormErrors>({});
   const [customInterest, setCustomInterest] = useState('');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
@@ -197,6 +201,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
         child: validated,
         duration_min: durationMin,
         interactive,
+        moral_focus: moralFocus,
       };
 
       onSubmit(payload);
@@ -438,6 +443,22 @@ export const StoryForm: React.FC<StoryFormProps> = ({
                 className={pillButtonClasses(durationMin === duration)}
               >
                 {duration} minute{duration > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="label-bedtime">Moral Focus</label>
+          <div className="flex gap-2 flex-wrap">
+            {MORAL_FOCI.map((mf) => (
+              <button
+                key={mf}
+                type="button"
+                onClick={() => setMoralFocus(mf)}
+                className={pillButtonClasses(moralFocus === mf)}
+              >
+                {mf[0].toUpperCase() + mf.slice(1)}
               </button>
             ))}
           </div>

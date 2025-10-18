@@ -21,7 +21,7 @@ import { createLogger } from '../utils/logger';
 const logger = createLogger('Gemini Service');
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /**
  * Call Gemini API with retry logic for strict JSON

@@ -1,4 +1,5 @@
 import { Child, Gender, AgeGroup, DurationMin } from './types';
+import type { MoralFocus } from './types';
 
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -13,6 +14,15 @@ export interface CharacterPreset {
 export const DEFAULT_DURATION_MIN: DurationMin = 2;
 export const DEFAULT_INTERACTIVE = true;
 export const MAX_INTERESTS = 5;
+export const MORAL_FOCI: MoralFocus[] = [
+  'kindness',
+  'honesty',
+  'courage',
+  'sharing',
+  'perseverance',
+];
+
+export const DEFAULT_MORAL_FOCUS: MoralFocus = 'kindness';
 
 // Character Presets
 export const CHARACTER_PRESETS: Record<string, CharacterPreset> = {

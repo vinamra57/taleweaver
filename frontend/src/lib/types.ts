@@ -9,6 +9,12 @@ export type AgeGroup = "4-6" | "7-9" | "10-12";
 export type DurationMin = 1 | 2 | 3;
 export type EmotionHint = "warm" | "curious" | "tense" | "relieved";
 export type ChoiceId = "A" | "B";
+export type MoralFocus =
+  | 'kindness'
+  | 'honesty'
+  | 'courage'
+  | 'sharing'
+  | 'perseverance';
 
 // ============================================================================
 // Child Profile
@@ -79,6 +85,7 @@ export interface StartRequest {
   child: Child;
   duration_min: DurationMin;
   interactive: boolean;
+  moral_focus: MoralFocus;
 }
 
 export interface ContinueRequest {
