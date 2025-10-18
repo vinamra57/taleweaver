@@ -9,32 +9,46 @@ export default {
       colors: {
         bedtime: {
           purple: {
-            DEFAULT: '#6B46C1',
-            light: '#9F7AEA',
-            dark: '#4C1D95',
+            DEFAULT: '#8B7AB8',
+            light: '#B4A5D5',
+            dark: '#5D4E7A',
+            pale: '#D5CAED',
           },
           blue: {
-            DEFAULT: '#2C3E75',
-            light: '#4A5F9F',
-            midnight: '#1A1F3A',
+            DEFAULT: '#6B85B2',
+            light: '#9DAECC',
+            midnight: '#2D3E5C',
+            soft: '#C8D6E8',
           },
           yellow: {
-            DEFAULT: '#FDB44B',
-            light: '#FED580',
-            soft: '#FFEAA7',
+            DEFAULT: '#F9C97C',
+            light: '#FFDDA1',
+            soft: '#FFE8B8',
+            glow: '#FFD56B',
           },
           cream: {
-            DEFAULT: '#FFF5E8',
-            warm: '#FFE8D1',
+            DEFAULT: '#FFF9F0',
+            warm: '#FFF3E0',
+            dark: '#F5E6D3',
+          },
+          green: {
+            soft: '#B8D4B8',
+            mint: '#D4EBD4',
+          },
+          pink: {
+            soft: '#F5C6D8',
+            blush: '#FFDEE8',
           }
         }
       },
       fontFamily: {
-        'child': ['"Comic Sans MS"', 'Comic Sans', 'cursive', 'sans-serif'],
+        'display': ['"Fredoka"', '"Quicksand"', '"Nunito"', 'sans-serif'],
+        'body': ['"Quicksand"', '"Nunito"', 'sans-serif'],
       },
       backgroundImage: {
-        'bedtime-gradient': 'linear-gradient(to bottom, #6B46C1, #2C3E75)',
-        'bedtime-radial': 'radial-gradient(circle at top, #6B46C1, #2C3E75, #1A1F3A)',
+        'bedtime-gradient': 'linear-gradient(135deg, #D5CAED 0%, #C8D6E8 50%, #B4A5D5 100%)',
+        'bedtime-radial': 'radial-gradient(ellipse at top, #D5CAED, #C8D6E8, #9DAECC)',
+        'soft-gradient': 'linear-gradient(to bottom, #FFF9F0, #F5E6D3)',
       }
     },
   },

@@ -8,24 +8,28 @@
   }
 
   body {
-    @apply bg-bedtime-gradient font-child text-bedtime-cream;
+    @apply bg-bedtime-gradient font-body text-bedtime-purple-dark;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply text-bedtime-cream;
+    @apply font-display text-bedtime-purple-dark;
   }
 
   h1 {
-    @apply text-4xl font-bold mb-4;
+    @apply text-4xl font-semibold mb-4;
   }
 
   h2 {
-    @apply text-3xl font-bold mb-3;
+    @apply text-3xl font-medium mb-3;
   }
 
   h3 {
-    @apply text-2xl font-bold mb-2;
+    @apply text-2xl font-medium mb-2;
+  }
+
+  h4 {
+    @apply text-xl font-medium mb-2;
   }
 }
 
@@ -37,41 +41,41 @@
 
   /* Card components */
   .bedtime-card {
-    @apply bg-bedtime-purple/30 backdrop-blur-sm rounded-2xl p-6 border-2 border-bedtime-purple-light/30 shadow-xl;
+    @apply bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-bedtime-purple-pale shadow-lg;
   }
 
   .bedtime-card-header {
-    @apply text-2xl font-bold text-bedtime-yellow mb-4 flex items-center gap-2;
+    @apply text-2xl font-medium text-bedtime-purple mb-4 flex items-center gap-2;
   }
 
   /* Button styles */
   .btn-primary {
-    @apply bg-bedtime-yellow text-bedtime-purple-dark px-6 py-3 rounded-full font-bold text-lg
-           shadow-lg hover:bg-bedtime-yellow-light transform hover:scale-105 transition-all duration-200
+    @apply bg-bedtime-yellow text-white px-8 py-4 rounded-full font-semibold text-lg
+           shadow-lg hover:shadow-xl hover:bg-bedtime-yellow-glow transform hover:scale-105 transition-all duration-300
            active:scale-95;
   }
 
   .btn-secondary {
-    @apply bg-bedtime-purple-light text-bedtime-cream px-6 py-3 rounded-full font-bold text-lg
-           shadow-lg hover:bg-bedtime-purple transform hover:scale-105 transition-all duration-200
+    @apply bg-bedtime-purple text-white px-6 py-3 rounded-full font-medium text-base
+           shadow-md hover:shadow-lg hover:bg-bedtime-purple-dark transform hover:scale-105 transition-all duration-300
            active:scale-95;
   }
 
   .btn-choice {
-    @apply w-full bg-bedtime-blue-light/50 text-bedtime-cream px-6 py-4 rounded-xl font-bold text-left
-           border-2 border-bedtime-yellow/50 hover:border-bedtime-yellow hover:bg-bedtime-blue-light/70
-           transform hover:scale-105 transition-all duration-200 shadow-md;
+    @apply w-full bg-white text-bedtime-purple-dark px-6 py-4 rounded-2xl font-normal text-left
+           border-2 border-bedtime-purple-pale hover:border-bedtime-purple hover:shadow-lg
+           transform hover:scale-105 transition-all duration-200;
   }
 
   /* Input styles */
   .input-bedtime {
-    @apply w-full px-4 py-3 rounded-xl bg-bedtime-blue-midnight/50 text-bedtime-cream
-           border-2 border-bedtime-purple-light/50 focus:border-bedtime-yellow focus:outline-none
-           placeholder-bedtime-cream/50;
+    @apply w-full px-4 py-3 rounded-xl bg-white text-bedtime-purple-dark
+           border-2 border-bedtime-purple-pale focus:border-bedtime-purple focus:outline-none focus:ring-2 focus:ring-bedtime-purple/20
+           placeholder-bedtime-purple/40 transition-all duration-200;
   }
 
   .label-bedtime {
-    @apply block text-bedtime-cream font-bold mb-2;
+    @apply block text-bedtime-purple-dark font-medium mb-2;
   }
 
   /* Loading spinner */
@@ -82,7 +86,7 @@
 
   /* Moon decoration */
   .moon {
-    @apply absolute top-8 right-8 w-16 h-16 rounded-full bg-bedtime-yellow shadow-lg shadow-bedtime-yellow/50;
+    @apply absolute top-8 right-8 w-20 h-20 rounded-full bg-bedtime-yellow-soft shadow-2xl shadow-bedtime-yellow/30;
   }
 
   /* Twinkling stars background effect */

@@ -154,10 +154,10 @@ export const StoryForm: React.FC<StoryFormProps> = ({ onSubmit, isLoading = fals
                 key={interest}
                 type="button"
                 onClick={() => handleInterestToggle(interest)}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                   formData.interests?.includes(interest)
-                    ? 'bg-bedtime-yellow text-bedtime-purple-dark'
-                    : 'bg-bedtime-blue-midnight/50 text-bedtime-cream border border-bedtime-purple-light/50'
+                    ? 'bg-bedtime-yellow text-white shadow-md'
+                    : 'bg-white text-bedtime-purple-dark border-2 border-bedtime-purple-pale hover:border-bedtime-purple'
                 }`}
               >
                 {interest}

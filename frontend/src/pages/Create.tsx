@@ -53,21 +53,16 @@ export const Create: React.FC = () => {
   }
 
   return (
-    <div className="container-bedtime stars-bg min-h-screen">
-      {/* Moon decoration */}
-      <div className="moon"></div>
-
+    <div className="container-bedtime min-h-screen">
       {/* Header */}
       <div className="text-center mb-8 pt-8">
         <button
           onClick={() => navigate('/')}
-          className="text-5xl mb-4 text-bedtime-yellow text-shadow-glow hover:scale-105 transition-transform cursor-pointer"
+          className="text-5xl mb-4 text-bedtime-purple font-display font-bold hover:scale-105 transition-transform cursor-pointer inline-block"
         >
-          <span className="animate-float inline-block">✨</span>
-          {' '}TaleWeaver{' '}
-          <span className="animate-float inline-block" style={{ animationDelay: '0.5s' }}>🌙</span>
+          TaleWeaver
         </button>
-        <p className="text-xl text-bedtime-cream-warm">
+        <p className="text-xl text-bedtime-purple-dark font-body">
           Create a magical bedtime story tailored just for you
         </p>
       </div>
@@ -76,7 +71,7 @@ export const Create: React.FC = () => {
       <div className="mb-6">
         <button
           onClick={() => navigate('/')}
-          className="text-bedtime-cream/70 hover:text-bedtime-yellow transition-colors flex items-center gap-2"
+          className="text-bedtime-purple hover:text-bedtime-purple-dark transition-colors flex items-center gap-2 font-body"
         >
           <span>←</span>
           <span>Back to Home</span>
@@ -88,8 +83,8 @@ export const Create: React.FC = () => {
 
       {/* Footer */}
       <div className="text-center mt-12 pb-8">
-        <p className="text-bedtime-cream/50 text-sm">
-          Powered by AI magic and imagination
+        <p className="text-bedtime-purple/60 text-sm font-body">
+          Powered by AI magic and imagination ✨
         </p>
       </div>
     </div>
