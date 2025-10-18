@@ -18,6 +18,7 @@ preview_id = "03edccb4318e426d8be2e044046c222d"
 [[r2_buckets]]
 binding = "AUDIO_BUCKET"
 bucket_name = "taleweaver-audio"
+preview_bucket_name = "taleweaver-audio-dev"
 
 # Workers AI binding
 [ai]
