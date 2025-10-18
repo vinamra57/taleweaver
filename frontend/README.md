@@ -1,4 +1,4 @@
-# EmpathAI Frontend
+# TaleWeaver Frontend
 
 A React TypeScript application for creating personalized, educational bedtime stories for children.
 

@@ -95,7 +95,7 @@ export const Play: React.FC = () => {
           onClick={() => navigate('/')}
           className="text-bedtime-yellow/70 hover:text-bedtime-yellow transition-colors text-lg mb-4"
         >
-          ✨ EmpathAI
+          ✨ TaleWeaver
         </button>
         <h1 className="text-4xl mb-2 text-bedtime-yellow text-shadow-glow">
           {storyTitle}

@@ -16,7 +16,7 @@ export const Home: React.FC = () => {
           </div>
 
           <h1 className="text-6xl md:text-7xl mb-6 text-bedtime-yellow text-shadow-glow">
-            EmpathAI
+            TaleWeaver
           </h1>
 
           <p className="text-2xl md:text-3xl text-bedtime-cream-warm mb-4">

@@ -64,7 +64,7 @@ export const Create: React.FC = () => {
           className="text-5xl mb-4 text-bedtime-yellow text-shadow-glow hover:scale-105 transition-transform cursor-pointer"
         >
           <span className="animate-float inline-block">✨</span>
-          {' '}EmpathAI{' '}
+          {' '}TaleWeaver{' '}
           <span className="animate-float inline-block" style={{ animationDelay: '0.5s' }}>🌙</span>
         </button>
         <p className="text-xl text-bedtime-cream-warm">

@@ -1,11 +1,11 @@
-# EmpathAI Frontend - Recent Updates
+# TaleWeaver Frontend - Recent Updates
 
 ## New Landing Page
 
 A beautiful landing page has been added at the root path `/` with the following features:
 
 ### Features:
-- **Hero Section**: Large EmpathAI branding with floating emoji animations
+- **Hero Section**: Large TaleWeaver branding with floating emoji animations
 - **Feature Cards**: Three key benefits (Personalized, Educational, Interactive)
 - **How It Works**: Step-by-step guide for parents
 - **Sample Characters**: Quick-start buttons for Arjun and Maya presets
@@ -25,7 +25,7 @@ You can now link directly to character presets:
 
 #### Navigation Improvements
 - All pages have navigation back to home
-- EmpathAI logo is clickable throughout the app
+- TaleWeaver logo is clickable throughout the app
 - "Back to Home" link on create page
 - "Start New Story" button on play page clears session and returns home
 
