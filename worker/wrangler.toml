@@ -1,0 +1,29 @@
+name = "taleweaver-worker"
+main = "src/index.ts"
+compatibility_date = "2025-10-18"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret environment variables
+[vars]
+ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
+SESSION_TTL_HOURS = "12"
+
+# KV namespace binding
+[[kv_namespaces]]
+binding = "TALEWEAVER_SESSIONS"
+id = "2a179ba456cb4a33821587523071ce0b"
+preview_id = "03edccb4318e426d8be2e044046c222d"
+
+# R2 bucket binding (uncomment after enabling R2 in dashboard)
+# [[r2_buckets]]
+# binding = "AUDIO_BUCKET"
+# bucket_name = "taleweaver-audio"
+
+# Workers AI binding
+[ai]
+binding = "AI"
+
+# Secrets (set via: wrangler secret put GEMINI_API_KEY)
+# GEMINI_API_KEY
+# ELEVENLABS_API_KEY
+# ELEVENLABS_VOICE_ID
