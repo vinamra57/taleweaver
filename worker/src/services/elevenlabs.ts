@@ -4,9 +4,10 @@
  */
 
 import type { Env } from '../types/env';
-import type { EmotionHint } from '../schemas/story';
 import { ElevenLabsError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
+
+type EmotionHint = 'warm' | 'curious' | 'tense' | 'relieved';
 
 const logger = createLogger('ElevenLabs Service');
 

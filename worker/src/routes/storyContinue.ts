@@ -1,6 +1,6 @@
 /**
  * POST /api/story/continue
- * Continues the story with Scene 2 based on the chosen option
+ * Continues the story after user makes a choice
  */
 
 import { Context } from 'hono';
@@ -8,16 +8,12 @@ import type { Env } from '../types/env';
 import {
   ContinueRequestSchema,
   ContinueResponse,
-  Scene,
 } from '../schemas/story';
 import { getSession, saveSession } from '../services/kv';
-import { generateContinueScene } from '../services/gemini';
-import { generateTTS } from '../services/elevenlabs';
-import { uploadAudio, getAudioUrl } from '../services/r2';
-import { rewriteForGradeLevel } from '../services/workersAi';
-import { buildPriorSummary } from '../services/summary';
-import { calculateMoralMeter } from '../services/moralMeter';
-import { buildContinuePrompt } from '../prompts/continue';
+import { generateContinuation } from '../services/gemini';
+import { createBranchesInParallel, getSegmentIdForBranch } from '../services/branchOrchestrator';
+import { buildContinuationPrompt } from '../prompts/storyGeneration';
+import { isFinalCheckpoint } from '../services/storyStructure';
 import { ValidationError, SessionNotFoundError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
 
@@ -33,104 +29,117 @@ export async function handleStoryContinue(c: Context): Promise<Response> {
 
     logger.info('Continuing story', {
       sessionId: validatedRequest.session_id,
-      choice: validatedRequest.choice,
+      checkpoint: validatedRequest.checkpoint,
+      choice: validatedRequest.chosen_branch,
     });
 
-    // Step 1: Fetch session from KV
+    // Fetch session from KV
     const session = await getSession(validatedRequest.session_id, env);
 
-    // Validate that the last scene ID matches
-    const lastScene = session.scenes[session.scenes.length - 1];
-    if (lastScene.id !== validatedRequest.last_scene_id) {
+    // Validate checkpoint number
+    if (validatedRequest.checkpoint !== session.current_checkpoint + 1) {
       throw new ValidationError(
-        `Last scene ID mismatch. Expected: ${lastScene.id}, Got: ${validatedRequest.last_scene_id}`
+        `Invalid checkpoint. Expected ${session.current_checkpoint + 1}, got ${validatedRequest.checkpoint}`
       );
     }
 
-    // Step 2: Update choices array
-    session.choices.push(validatedRequest.choice);
-
-    // Step 3: Build prior summary
-    const priorSummary = buildPriorSummary(session.scenes, session.choices);
-
-    // Get the chosen option text (would need to store choice options in session for full implementation)
-    const chosenOptionText = `Option ${validatedRequest.choice}`;
-
-    // Step 4: Build prompt and call Gemini
-    const prompt = buildContinuePrompt(
-      session.child.age,
-      priorSummary,
-      chosenOptionText
+    // Find the pre-generated segment for the chosen branch
+    const chosenSegmentId = getSegmentIdForBranch(
+      validatedRequest.checkpoint,
+      validatedRequest.chosen_branch
     );
 
-    const geminiResponse = await generateContinueScene(prompt, env);
+    const chosenSegment = session.segments.find((s) => s.id === chosenSegmentId);
 
-    // Step 5: Rewrite for grade level with Workers AI
-    let sceneText = geminiResponse.scene_text;
-
-    try {
-      sceneText = await rewriteForGradeLevel(
-        sceneText,
-        session.child.age,
-        env
+    if (!chosenSegment) {
+      throw new ValidationError(
+        `Segment not found for choice ${validatedRequest.chosen_branch} at checkpoint ${validatedRequest.checkpoint}`
       );
-    } catch (error) {
-      logger.warn('Workers AI rewrite failed, using original text', error);
-      // Continue with original text
     }
 
-    // Step 6: Generate TTS audio
-    const audioBuffer = await generateTTS(
-      sceneText,
-      geminiResponse.emotion_hint,
-      env
+    logger.info('Found pre-generated segment', { segmentId: chosenSegment.id });
+
+    // Update session: add choice to path, increment checkpoint
+    session.chosen_path.push(validatedRequest.chosen_branch);
+    session.current_checkpoint = validatedRequest.checkpoint;
+
+    // Check if this is the final checkpoint
+    const isFinal = isFinalCheckpoint(session.current_checkpoint, session.total_checkpoints);
+
+    if (isFinal) {
+      // FINAL SEGMENT: No more choices, story is complete
+      logger.info('Reached final checkpoint, story complete');
+
+      await saveSession(session, env);
+
+      const response: ContinueResponse = {
+        segment: chosenSegment,
+        story_complete: true,
+      };
+
+      logger.info('Story continued successfully (final)', {
+        sessionId: session.session_id,
+      });
+
+      return c.json(response, 200);
+    }
+
+    // NOT FINAL: Generate next two branches for the upcoming choice
+    logger.info('Generating next branches', {
+      nextCheckpoint: session.current_checkpoint + 1,
+    });
+
+    // Build prompt for continuation
+    const continuationPrompt = buildContinuationPrompt(
+      session.story_prompt,
+      session.child,
+      session.moral_focus,
+      session.words_per_segment,
+      session.chosen_path,
+      session.current_checkpoint,
+      session.total_checkpoints,
+      chosenSegment.text
     );
 
-    // Step 7: Upload to R2
-    const sceneId = 'scene_2';
-    const audioKey = await uploadAudio(
-      session.session_id,
-      sceneId,
-      audioBuffer,
-      env
-    );
+    // Generate next branches with Gemini
+    const continuationResponse = await generateContinuation(continuationPrompt, env);
 
     // Get worker URL from request
     const workerUrl = new URL(c.req.url).origin;
-    const audioUrl = getAudioUrl(audioKey, env, workerUrl);
 
-    // Step 8: Create scene object
-    const scene: Scene = {
-      id: sceneId,
-      text: sceneText,
-      emotion_hint: geminiResponse.emotion_hint,
-      audio_url: audioUrl,
-    };
+    // Determine next checkpoint number
+    const nextCheckpointNumber = session.current_checkpoint + 1;
 
-    // Step 9: Add scene to session
-    session.scenes.push(scene);
-
-    // Step 10: Update prior summary
-    session.prior_summary = buildPriorSummary(session.scenes, session.choices);
-
-    // Step 11: Calculate moral meter
-    session.meter = calculateMoralMeter(
-      session.scenes,
-      session.choices,
-      session.moral_focus
+    // Generate both branches in parallel
+    const branches = await createBranchesInParallel(
+      session.session_id,
+      continuationResponse.choice_a?.text || 'Choice A',
+      continuationResponse.choice_a?.next_segment || '',
+      continuationResponse.choice_b?.text || 'Choice B',
+      continuationResponse.choice_b?.next_segment || '',
+      nextCheckpointNumber,
+      `segment_${nextCheckpointNumber + 1}`,
+      env,
+      workerUrl
     );
 
-    // Step 12: Save updated session to KV
+    // Add new segments to session
+    session.segments.push(branches[0].segment, branches[1].segment);
+
+    // Save updated session
     await saveSession(session, env);
 
-    // Step 13: Build response
+    // Build response
     const response: ContinueResponse = {
-      scene,
-      ending: geminiResponse.ending,
-      moral_meter: session.meter,
+      segment: chosenSegment,
+      next_branches: branches,
+      story_complete: false,
     };
 
-    logger.info('Story continued successfully', { sessionId: session.session_id });
+    logger.info('Story continued successfully', {
+      sessionId: session.session_id,
+      currentCheckpoint: session.current_checkpoint,
+    });
 
     return c.json(response, 200);
   } catch (error) {

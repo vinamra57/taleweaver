@@ -1,21 +1,27 @@
 /**
- * Gemini Service - Story Generation
- * Handles calling Gemini API with strict JSON parsing and retry logic
+ * Gemini Service - Two-Phase Story Generation
+ * Phase 1: Generate detailed story prompt
+ * Phase 2: Generate story segments
  */
 
 import type { Env } from '../types/env';
 import {
-  GeminiStartResponse,
-  GeminiContinueResponse,
-  GeminiStartResponseSchema,
-  GeminiContinueResponseSchema,
+  GeminiPromptResponse,
+  GeminiPromptResponseSchema,
+  GeminiNonInteractiveResponse,
+  GeminiNonInteractiveResponseSchema,
+  GeminiFirstSegmentResponse,
+  GeminiFirstSegmentResponseSchema,
+  GeminiContinuationResponse,
+  GeminiContinuationResponseSchema,
 } from '../schemas/story';
 import { GeminiError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Gemini Service');
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
 /**
  * Call Gemini API with retry logic for strict JSON
@@ -45,24 +51,21 @@ async function callGeminiWithRetry(
             },
           ],
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 800,
+            temperature: 0.8,
+            maxOutputTokens: 2048,
           },
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new GeminiError(
-          `API returned ${response.status}: ${errorText}`
-        );
+        throw new GeminiError(`API returned ${response.status}: ${errorText}`);
       }
 
       const data = (await response.json()) as any;
 
       // Extract text from Gemini response
-      const generatedText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!generatedText) {
         throw new GeminiError('No text generated in response');
@@ -72,10 +75,7 @@ async function callGeminiWithRetry(
       return generatedText;
     } catch (error) {
       if (attempt < maxRetries) {
-        logger.warn(
-          `Gemini API call failed (attempt ${attempt + 1}), retrying...`,
-          error
-        );
+        logger.warn(`Gemini API call failed (attempt ${attempt + 1}), retrying...`, error);
         // If this was a retry, add a hint to the prompt
         if (attempt === 0 && !prompt.includes('Return valid strict JSON')) {
           prompt += '\n\nReturn valid strict JSON only.';
@@ -103,68 +103,110 @@ function extractJSON(text: string): unknown {
   try {
     return JSON.parse(jsonText.trim());
   } catch (error) {
-    throw new GeminiError(
-      `Failed to parse JSON from response: ${error}`
-    );
+    throw new GeminiError(`Failed to parse JSON from response: ${error}`);
   }
 }
 
 /**
- * Generate start scene with Gemini
+ * Phase 1: Generate detailed story prompt from user inputs
  */
-export async function generateStartScene(
+export async function generateStoryPrompt(
   prompt: string,
   env: Env
-): Promise<GeminiStartResponse> {
+): Promise<GeminiPromptResponse> {
   try {
-    logger.info('Generating start scene with Gemini');
+    logger.info('Phase 1: Generating detailed story prompt');
 
-    const responseText = await callGeminiWithRetry(
-      prompt,
-      env.GEMINI_API_KEY,
-      1
-    );
+    const responseText = await callGeminiWithRetry(prompt, env.GEMINI_API_KEY, 1);
 
     // Parse and validate JSON
     const jsonData = extractJSON(responseText);
-    const validatedData = GeminiStartResponseSchema.parse(jsonData);
+    const validatedData = GeminiPromptResponseSchema.parse(jsonData);
 
-    logger.info('Start scene generated successfully');
+    logger.info('Story prompt generated successfully');
     return validatedData;
   } catch (error) {
-    logger.error('Failed to generate start scene', error);
+    logger.error('Failed to generate story prompt', error);
     throw error instanceof GeminiError
       ? error
-      : new GeminiError(`Start scene generation failed: ${error}`);
+      : new GeminiError(`Story prompt generation failed: ${error}`);
   }
 }
 
 /**
- * Generate continue scene with Gemini
+ * Phase 2A: Generate non-interactive story (single continuous narrative)
  */
-export async function generateContinueScene(
+export async function generateNonInteractiveStory(
   prompt: string,
   env: Env
-): Promise<GeminiContinueResponse> {
+): Promise<GeminiNonInteractiveResponse> {
   try {
-    logger.info('Generating continue scene with Gemini');
+    logger.info('Phase 2: Generating non-interactive story');
 
-    const responseText = await callGeminiWithRetry(
-      prompt,
-      env.GEMINI_API_KEY,
-      1
-    );
+    const responseText = await callGeminiWithRetry(prompt, env.GEMINI_API_KEY, 1);
 
     // Parse and validate JSON
     const jsonData = extractJSON(responseText);
-    const validatedData = GeminiContinueResponseSchema.parse(jsonData);
+    const validatedData = GeminiNonInteractiveResponseSchema.parse(jsonData);
 
-    logger.info('Continue scene generated successfully');
+    logger.info('Non-interactive story generated successfully');
     return validatedData;
   } catch (error) {
-    logger.error('Failed to generate continue scene', error);
+    logger.error('Failed to generate non-interactive story', error);
     throw error instanceof GeminiError
       ? error
-      : new GeminiError(`Continue scene generation failed: ${error}`);
+      : new GeminiError(`Non-interactive story generation failed: ${error}`);
+  }
+}
+
+/**
+ * Phase 2B: Generate first segment with branching choices
+ */
+export async function generateFirstSegment(
+  prompt: string,
+  env: Env
+): Promise<GeminiFirstSegmentResponse> {
+  try {
+    logger.info('Phase 2: Generating first segment with branches');
+
+    const responseText = await callGeminiWithRetry(prompt, env.GEMINI_API_KEY, 1);
+
+    // Parse and validate JSON
+    const jsonData = extractJSON(responseText);
+    const validatedData = GeminiFirstSegmentResponseSchema.parse(jsonData);
+
+    logger.info('First segment with branches generated successfully');
+    return validatedData;
+  } catch (error) {
+    logger.error('Failed to generate first segment', error);
+    throw error instanceof GeminiError
+      ? error
+      : new GeminiError(`First segment generation failed: ${error}`);
+  }
+}
+
+/**
+ * Phase 2C: Generate continuation segments after a choice
+ */
+export async function generateContinuation(
+  prompt: string,
+  env: Env
+): Promise<GeminiContinuationResponse> {
+  try {
+    logger.info('Phase 2: Generating continuation with new branches');
+
+    const responseText = await callGeminiWithRetry(prompt, env.GEMINI_API_KEY, 1);
+
+    // Parse and validate JSON
+    const jsonData = extractJSON(responseText);
+    const validatedData = GeminiContinuationResponseSchema.parse(jsonData);
+
+    logger.info('Continuation generated successfully');
+    return validatedData;
+  } catch (error) {
+    logger.error('Failed to generate continuation', error);
+    throw error instanceof GeminiError
+      ? error
+      : new GeminiError(`Continuation generation failed: ${error}`);
   }
 }

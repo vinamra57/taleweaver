@@ -8,7 +8,6 @@ import { cors } from 'hono/cors';
 import type { Env } from './types/env';
 import { handleStoryStart } from './routes/storyStart';
 import { handleStoryContinue } from './routes/storyContinue';
-import { handleTTS } from './routes/tts';
 import { getAudio } from './services/r2';
 import { TaleWeaverError } from './utils/errors';
 import { createLogger } from './utils/logger';
@@ -34,7 +33,6 @@ app.get('/', (c) => {
     endpoints: {
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
-      tts: 'POST /api/tts',
       audio: 'GET /audio/:sessionId/:sceneId.mp3',
     },
   });
@@ -43,7 +41,6 @@ app.get('/', (c) => {
 // API Routes
 app.post('/api/story/start', handleStoryStart);
 app.post('/api/story/continue', handleStoryContinue);
-app.post('/api/tts', handleTTS);
 
 // Audio proxy endpoint (for serving R2 audio files)
 app.get('/audio/:sessionId/:sceneId', async (c) => {

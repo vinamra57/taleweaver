@@ -14,10 +14,10 @@ binding = "TALEWEAVER_SESSIONS"
 id = "2a179ba456cb4a33821587523071ce0b"
 preview_id = "03edccb4318e426d8be2e044046c222d"
 
-# R2 bucket binding (uncomment after enabling R2 in dashboard)
-# [[r2_buckets]]
-# binding = "AUDIO_BUCKET"
-# bucket_name = "taleweaver-audio"
+# R2 bucket binding
+[[r2_buckets]]
+binding = "AUDIO_BUCKET"
+bucket_name = "taleweaver-audio"
 
 # Workers AI binding
 [ai]

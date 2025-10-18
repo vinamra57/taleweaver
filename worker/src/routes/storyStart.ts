@@ -1,6 +1,6 @@
 /**
  * POST /api/story/start
- * Creates a new story session with Scene 1
+ * Creates a new story session (interactive or non-interactive)
  */
 
 import { Context } from 'hono';
@@ -9,15 +9,20 @@ import {
   StartRequestSchema,
   StartResponse,
   Session,
-  Scene,
 } from '../schemas/story';
-import { generateStartScene } from '../services/gemini';
-import { generateTTS } from '../services/elevenlabs';
-import { uploadAudio, getAudioUrl } from '../services/r2';
-import { rewriteForGradeLevel } from '../services/workersAi';
+import {
+  generateStoryPrompt,
+  generateNonInteractiveStory,
+  generateFirstSegment,
+} from '../services/gemini';
 import { saveSession } from '../services/kv';
-import { getDefaultMoralMeter } from '../services/moralMeter';
-import { buildStartPrompt } from '../prompts/start';
+import { calculateStoryStructure, generateSegmentId } from '../services/storyStructure';
+import { createSegmentWithAudio, createBranchesInParallel } from '../services/branchOrchestrator';
+import { buildPromptGenerationPrompt } from '../prompts/promptGeneration';
+import {
+  buildNonInteractiveStoryPrompt,
+  buildFirstSegmentPrompt,
+} from '../prompts/storyGeneration';
 import { generateUUID } from '../utils/validation';
 import { ValidationError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
@@ -34,81 +39,165 @@ export async function handleStoryStart(c: Context): Promise<Response> {
 
     logger.info('Starting new story', {
       name: validatedRequest.child.name,
-      age: validatedRequest.child.age,
+      age: validatedRequest.child.age_range,
+      length: validatedRequest.story_length,
+      interactive: validatedRequest.interactive,
       moral: validatedRequest.moral_focus,
     });
 
     // Generate session ID
     const sessionId = generateUUID();
 
-    // Step 1: Build prompt and call Gemini
-    const prompt = buildStartPrompt(
+    // Calculate story structure
+    const structure = calculateStoryStructure(
+      validatedRequest.story_length,
+      validatedRequest.interactive
+    );
+
+    logger.info('Story structure calculated', structure);
+
+    // ========================================================================
+    // PHASE 1: Generate detailed story prompt
+    // ========================================================================
+
+    const promptGenPrompt = buildPromptGenerationPrompt(
       validatedRequest.child,
+      validatedRequest.story_length,
+      validatedRequest.interactive,
       validatedRequest.moral_focus
     );
 
-    const geminiResponse = await generateStartScene(prompt, env);
+    const promptResponse = await generateStoryPrompt(promptGenPrompt, env);
+    const detailedStoryPrompt = promptResponse.story_prompt;
 
-    // Step 2: Rewrite for grade level with Workers AI
-    let sceneText = geminiResponse.scene_text;
-
-    try {
-      sceneText = await rewriteForGradeLevel(
-        sceneText,
-        validatedRequest.child.age,
-        env
-      );
-    } catch (error) {
-      logger.warn('Workers AI rewrite failed, using original text', error);
-      // Continue with original text
-    }
-
-    // Step 3: Generate TTS audio
-    const audioBuffer = await generateTTS(
-      sceneText,
-      geminiResponse.emotion_hint,
-      env
-    );
-
-    // Step 4: Upload to R2
-    const sceneId = 'scene_1';
-    const audioKey = await uploadAudio(sessionId, sceneId, audioBuffer, env);
+    logger.info('Detailed story prompt generated', {
+      theme: promptResponse.story_theme,
+    });
 
     // Get worker URL from request
     const workerUrl = new URL(c.req.url).origin;
-    const audioUrl = getAudioUrl(audioKey, env, workerUrl);
 
-    // Step 5: Create scene object
-    const scene: Scene = {
-      id: sceneId,
-      text: sceneText,
-      emotion_hint: geminiResponse.emotion_hint,
-      audio_url: audioUrl,
-    };
+    // ========================================================================
+    // PHASE 2: Generate story content based on interactive mode
+    // ========================================================================
 
-    // Step 6: Initialize session and save to KV
+    if (!validatedRequest.interactive) {
+      // NON-INTERACTIVE MODE: Single continuous story
+      logger.info('Generating non-interactive story');
+
+      const storyPrompt = buildNonInteractiveStoryPrompt(
+        detailedStoryPrompt,
+        validatedRequest.child,
+        validatedRequest.moral_focus,
+        structure.total_words
+      );
+
+      const storyResponse = await generateNonInteractiveStory(storyPrompt, env);
+
+      // Create segment with audio
+      const segment = await createSegmentWithAudio(
+        sessionId,
+        'segment_1',
+        storyResponse.story_text,
+        0,
+        env,
+        workerUrl
+      );
+
+      // Create and save session
+      const session: Session = {
+        session_id: sessionId,
+        child: validatedRequest.child,
+        story_length: validatedRequest.story_length,
+        interactive: false,
+        moral_focus: validatedRequest.moral_focus,
+        story_prompt: detailedStoryPrompt,
+        total_checkpoints: 0,
+        current_checkpoint: 0,
+        words_per_segment: structure.words_per_segment,
+        chosen_path: [],
+        segments: [segment],
+        created_at: new Date().toISOString(),
+      };
+
+      await saveSession(session, env);
+
+      // Build response
+      const response: StartResponse = {
+        session_id: sessionId,
+        segment,
+        story_complete: true,
+      };
+
+      logger.info('Non-interactive story created successfully', { sessionId });
+      return c.json(response, 200);
+    }
+
+    // ========================================================================
+    // INTERACTIVE MODE: Generate first segment + 2 branches
+    // ========================================================================
+
+    logger.info('Generating interactive story with branches');
+
+    const firstSegmentPrompt = buildFirstSegmentPrompt(
+      detailedStoryPrompt,
+      validatedRequest.child,
+      validatedRequest.moral_focus,
+      structure.words_per_segment
+    );
+
+    const firstSegmentResponse = await generateFirstSegment(firstSegmentPrompt, env);
+
+    // Create first segment (start → checkpoint 1)
+    const firstSegment = await createSegmentWithAudio(
+      sessionId,
+      generateSegmentId(0), // segment_1
+      firstSegmentResponse.segment_text,
+      0,
+      env,
+      workerUrl
+    );
+
+    // Create both branches in parallel (for checkpoint 1 → 2)
+    const branches = await createBranchesInParallel(
+      sessionId,
+      firstSegmentResponse.choice_a.text,
+      firstSegmentResponse.choice_a.next_segment,
+      firstSegmentResponse.choice_b.text,
+      firstSegmentResponse.choice_b.next_segment,
+      1, // next checkpoint number
+      'segment_2', // base ID for next segments
+      env,
+      workerUrl
+    );
+
+    // Create and save session
     const session: Session = {
       session_id: sessionId,
       child: validatedRequest.child,
+      story_length: validatedRequest.story_length,
+      interactive: true,
       moral_focus: validatedRequest.moral_focus,
-      scenes: [scene],
-      choices: [],
-      prior_summary: `The story began: ${sceneText.slice(0, 150)}...`,
-      meter: getDefaultMoralMeter(),
+      story_prompt: detailedStoryPrompt,
+      total_checkpoints: structure.total_checkpoints,
+      current_checkpoint: 0,
+      words_per_segment: structure.words_per_segment,
+      chosen_path: [],
+      segments: [firstSegment, branches[0].segment, branches[1].segment],
       created_at: new Date().toISOString(),
     };
 
     await saveSession(session, env);
 
-    // Step 7: Build response
+    // Build response
     const response: StartResponse = {
       session_id: sessionId,
-      scene,
-      choice: geminiResponse.choice,
+      segment: firstSegment,
+      next_branches: branches,
+      story_complete: false,
     };
 
-    logger.info('Story started successfully', { sessionId });
-
+    logger.info('Interactive story started successfully', { sessionId });
     return c.json(response, 200);
   } catch (error) {
     logger.error('Story start failed', error);

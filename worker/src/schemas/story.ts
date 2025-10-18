@@ -1,13 +1,19 @@
 import { z } from 'zod';
 
 /**
- * Zod Schemas for TaleWeaver API
- * Based on the spec's data contracts
+ * Zod Schemas for TaleWeaver API (Branching Interactive Stories)
+ * Updated to match new architecture with checkpoints and pre-generation
  */
 
 // ============================================================================
 // Base Types
 // ============================================================================
+
+export const GenderSchema = z.enum(['male', 'female']);
+
+export const AgeRangeSchema = z.enum(['4-6', '7-9', '10-12']);
+
+export const StoryLengthSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
 export const MoralFocusSchema = z.enum([
   'kindness',
@@ -17,9 +23,7 @@ export const MoralFocusSchema = z.enum([
   'perseverance',
 ]);
 
-export const EmotionHintSchema = z.enum(['warm', 'curious', 'tense', 'relieved']);
-
-export const ChoiceSchema = z.enum(['A', 'B']);
+export const BranchChoiceSchema = z.enum(['A', 'B']);
 
 // ============================================================================
 // Child Info
@@ -31,50 +35,31 @@ export const ChildSchema = z.object({
     .min(1, 'Name is required')
     .max(50, 'Name too long')
     .regex(/^[a-zA-Z\s'-]+$/, 'Name must contain only letters, spaces, hyphens, and apostrophes'),
-  age: z.number().int().min(5, 'Age must be at least 5').max(11, 'Age must be at most 11'),
-  interests: z
-    .array(z.string().min(1).max(50))
-    .max(5, 'Maximum 5 interests allowed')
-    .default([]),
-  context: z.string().max(120, 'Context must be 120 characters or less').optional(),
+  gender: GenderSchema,
+  age_range: AgeRangeSchema,
+  interests: z.string().min(1, 'Interests required').max(500, 'Interests too long'),
+  context: z.string().max(200, 'Context must be 200 characters or less').optional(),
 });
 
 // ============================================================================
-// Scene
+// Story Segment
 // ============================================================================
 
-export const SceneSchema = z.object({
-  id: z.string(),
+export const StorySegmentSchema = z.object({
+  id: z.string(), // "segment_1", "segment_2a", "segment_2b", etc.
   text: z.string(),
-  emotion_hint: EmotionHintSchema,
   audio_url: z.string().url(),
+  checkpoint_number: z.number().int().min(0), // 0 = start, 1 = first checkpoint, etc.
 });
 
 // ============================================================================
-// Choice
+// Story Branch (for pre-generated paths)
 // ============================================================================
 
-export const ChoiceOptionsSchema = z.object({
-  prompt: z.string(),
-  options: z.tuple([z.string(), z.string()]), // Exactly 2 options (A/B)
-});
-
-// ============================================================================
-// Ending / Reflection
-// ============================================================================
-
-export const EndingSchema = z.object({
-  reflection: z.string(),
-});
-
-// ============================================================================
-// Moral Meter
-// ============================================================================
-
-export const MoralMeterSchema = z.object({
-  kind: z.number().min(0).max(1),
-  honest: z.number().min(0).max(1),
-  brave: z.number().min(0).max(1),
+export const StoryBranchSchema = z.object({
+  choice_text: z.string(), // The text of the choice (e.g., "Share the toy")
+  choice_value: BranchChoiceSchema, // "A" or "B"
+  segment: StorySegmentSchema,
 });
 
 // ============================================================================
@@ -84,41 +69,31 @@ export const MoralMeterSchema = z.object({
 // POST /api/story/start - Request
 export const StartRequestSchema = z.object({
   child: ChildSchema,
+  story_length: StoryLengthSchema, // 1, 2, or 3 minutes
+  interactive: z.boolean(),
   moral_focus: MoralFocusSchema,
 });
 
 // POST /api/story/start - Response
 export const StartResponseSchema = z.object({
   session_id: z.string().uuid(),
-  scene: SceneSchema,
-  choice: ChoiceOptionsSchema,
+  segment: StorySegmentSchema, // First segment (start → checkpoint 1)
+  next_branches: z.array(StoryBranchSchema).length(2).optional(), // Pre-generated branches (only if interactive)
+  story_complete: z.boolean(), // true if non-interactive single segment
 });
 
 // POST /api/story/continue - Request
 export const ContinueRequestSchema = z.object({
   session_id: z.string().uuid(),
-  last_scene_id: z.string(),
-  choice: ChoiceSchema,
+  checkpoint: z.number().int().min(1), // Which checkpoint the user just reached
+  chosen_branch: BranchChoiceSchema, // "A" or "B"
 });
 
 // POST /api/story/continue - Response
 export const ContinueResponseSchema = z.object({
-  scene: SceneSchema,
-  ending: EndingSchema,
-  moral_meter: MoralMeterSchema,
-});
-
-// POST /api/tts (optional) - Request
-export const TTSRequestSchema = z.object({
-  session_id: z.string().uuid(),
-  scene_id: z.string(),
-  text: z.string(),
-  emotion_hint: EmotionHintSchema,
-});
-
-// POST /api/tts (optional) - Response
-export const TTSResponseSchema = z.object({
-  audio_url: z.string().url(),
+  segment: StorySegmentSchema, // The segment for the chosen branch (already pre-generated)
+  next_branches: z.array(StoryBranchSchema).length(2).optional(), // Next pre-generated branches (if not final)
+  story_complete: z.boolean(), // true if this was the final segment
 });
 
 // ============================================================================
@@ -128,11 +103,23 @@ export const TTSResponseSchema = z.object({
 export const SessionSchema = z.object({
   session_id: z.string().uuid(),
   child: ChildSchema,
+  story_length: StoryLengthSchema,
+  interactive: z.boolean(),
   moral_focus: MoralFocusSchema,
-  scenes: z.array(SceneSchema),
-  choices: z.array(ChoiceSchema),
-  prior_summary: z.string(),
-  meter: MoralMeterSchema,
+
+  // Story metadata
+  story_prompt: z.string(), // The detailed prompt generated in phase 1
+  total_checkpoints: z.number().int(), // Total number of checkpoints (story_length)
+  current_checkpoint: z.number().int(), // Current checkpoint (0 = start)
+  words_per_segment: z.number().int(), // Calculated word count per segment
+
+  // Branch tracking
+  chosen_path: z.array(BranchChoiceSchema), // History of choices ["A", "B", "A"]
+
+  // Pre-generated content
+  segments: z.array(StorySegmentSchema), // All generated segments (including pre-generated branches)
+
+  // Metadata
   created_at: z.string().datetime(),
 });
 
@@ -140,41 +127,62 @@ export const SessionSchema = z.object({
 // Gemini Response Schemas (for strict JSON parsing)
 // ============================================================================
 
-export const GeminiStartResponseSchema = z.object({
-  scene_text: z.string(),
-  emotion_hint: EmotionHintSchema,
-  choice: z.object({
-    prompt: z.string(),
-    options: z.tuple([z.string(), z.string()]),
+// Phase 1: Prompt generation
+export const GeminiPromptResponseSchema = z.object({
+  story_prompt: z.string(), // Detailed prompt for story generation
+  story_theme: z.string().optional(), // Optional theme extracted
+});
+
+// Phase 2: Story segment generation (non-interactive)
+export const GeminiNonInteractiveResponseSchema = z.object({
+  story_text: z.string(),
+});
+
+// Phase 2: Story segment generation (interactive - first segment)
+export const GeminiFirstSegmentResponseSchema = z.object({
+  segment_text: z.string(),
+  choice_prompt: z.string(), // Question for the user (e.g., "What should Maya do?")
+  choice_a: z.object({
+    text: z.string(), // Choice text (e.g., "Share the toy")
+    next_segment: z.string(), // Story continuation if A is chosen
+  }),
+  choice_b: z.object({
+    text: z.string(),
+    next_segment: z.string(),
   }),
 });
 
-export const GeminiContinueResponseSchema = z.object({
-  scene_text: z.string(),
-  emotion_hint: EmotionHintSchema,
-  ending: z.object({
-    reflection: z.string(),
-  }),
+// Phase 2: Story segment generation (interactive - continuation)
+export const GeminiContinuationResponseSchema = z.object({
+  choice_prompt: z.string().optional(), // Only if not the final segment
+  choice_a: z.object({
+    text: z.string(),
+    next_segment: z.string(),
+  }).optional(),
+  choice_b: z.object({
+    text: z.string(),
+    next_segment: z.string(),
+  }).optional(),
 });
 
 // ============================================================================
 // TypeScript Types (exported for use in code)
 // ============================================================================
 
+export type Gender = z.infer<typeof GenderSchema>;
+export type AgeRange = z.infer<typeof AgeRangeSchema>;
+export type StoryLength = z.infer<typeof StoryLengthSchema>;
 export type MoralFocus = z.infer<typeof MoralFocusSchema>;
-export type EmotionHint = z.infer<typeof EmotionHintSchema>;
-export type Choice = z.infer<typeof ChoiceSchema>;
+export type BranchChoice = z.infer<typeof BranchChoiceSchema>;
 export type Child = z.infer<typeof ChildSchema>;
-export type Scene = z.infer<typeof SceneSchema>;
-export type ChoiceOptions = z.infer<typeof ChoiceOptionsSchema>;
-export type Ending = z.infer<typeof EndingSchema>;
-export type MoralMeter = z.infer<typeof MoralMeterSchema>;
+export type StorySegment = z.infer<typeof StorySegmentSchema>;
+export type StoryBranch = z.infer<typeof StoryBranchSchema>;
 export type StartRequest = z.infer<typeof StartRequestSchema>;
 export type StartResponse = z.infer<typeof StartResponseSchema>;
 export type ContinueRequest = z.infer<typeof ContinueRequestSchema>;
 export type ContinueResponse = z.infer<typeof ContinueResponseSchema>;
-export type TTSRequest = z.infer<typeof TTSRequestSchema>;
-export type TTSResponse = z.infer<typeof TTSResponseSchema>;
 export type Session = z.infer<typeof SessionSchema>;
-export type GeminiStartResponse = z.infer<typeof GeminiStartResponseSchema>;
-export type GeminiContinueResponse = z.infer<typeof GeminiContinueResponseSchema>;
+export type GeminiPromptResponse = z.infer<typeof GeminiPromptResponseSchema>;
+export type GeminiNonInteractiveResponse = z.infer<typeof GeminiNonInteractiveResponseSchema>;
+export type GeminiFirstSegmentResponse = z.infer<typeof GeminiFirstSegmentResponseSchema>;
+export type GeminiContinuationResponse = z.infer<typeof GeminiContinuationResponseSchema>;

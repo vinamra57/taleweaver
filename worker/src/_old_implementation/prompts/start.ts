@@ -7,15 +7,15 @@ import type { Child, MoralFocus } from '../schemas/story';
 
 export function buildStartPrompt(child: Child, moralFocus: MoralFocus): string {
   const interestsList =
-    child.interests.length > 0
-      ? child.interests.join(', ')
+    child.interests && child.interests.trim().length > 0
+      ? child.interests
       : 'everyday adventures';
 
   const contextLine = child.context
     ? `Context: ${child.context}`
     : '';
 
-  return `You are a children's storyteller creating age-appropriate bedtime stories for age ${child.age}.
+  return `You are a children's storyteller creating age-appropriate bedtime stories for age ${child.age_range}.
 
 Write SCENE 1 (150–200 words) starring ${child.name}.
 Include interests: ${interestsList}.
