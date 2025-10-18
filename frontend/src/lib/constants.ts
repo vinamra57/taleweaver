@@ -1,37 +1,53 @@
-import { Child } from './types';
+import { Child, Gender, AgeGroup, DurationMin } from './types';
 
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+export interface CharacterPreset {
+  child: Child;
+  duration_min: DurationMin;
+  interactive: boolean;
+}
+
+// Default settings
+export const DEFAULT_DURATION_MIN: DurationMin = 2;
+export const DEFAULT_INTERACTIVE = true;
+export const MAX_INTERESTS = 5;
 
 // Character Presets
-export const CHARACTER_PRESETS: Record<string, Child> = {
+export const CHARACTER_PRESETS: Record<string, CharacterPreset> = {
   arjun: {
-    name: 'Arjun',
-    age: 8,
-    interests: ['sports', 'jungle', 'monkeys'],
-    context: 'took shortcut in game',
-    moralFocus: 'honesty',
+    child: {
+      name: 'Arjun',
+      gender: 'male',
+      age_group: '7-9',
+      interests: ['sports', 'jungle', 'monkeys'],
+      context: 'took shortcut in game',
+    },
+    duration_min: 2,
+    interactive: true,
   },
   maya: {
-    name: 'Maya',
-    age: 7,
-    interests: ['space', 'stars', 'drawing'],
-    context: 'starting new school',
-    moralFocus: 'kindness',
+    child: {
+      name: 'Maya',
+      gender: 'female',
+      age_group: '7-9',
+      interests: ['space', 'stars', 'drawing'],
+      context: 'starting new school',
+    },
+    duration_min: 2,
+    interactive: true,
   },
 };
 
-// Moral Focus Options
-export const MORAL_FOCUSES = [
-  'honesty',
-  'kindness',
-  'courage',
-  'responsibility',
-  'empathy',
-  'perseverance',
-  'fairness',
-  'respect',
-] as const;
+// Gender Options
+export const GENDERS: Gender[] = ['male', 'female'];
+
+// Age Group Options
+export const AGE_GROUPS: AgeGroup[] = ['4-6', '7-9', '10-12'];
+
+// Duration Options
+export const DURATIONS: DurationMin[] = [1, 2, 3];
 
 // Common Interests
 export const COMMON_INTERESTS = [
@@ -52,10 +68,6 @@ export const COMMON_INTERESTS = [
   'superheroes',
 ] as const;
 
-// Age Range
-export const MIN_AGE = 3;
-export const MAX_AGE = 12;
-
 // Loading messages for storytelling
 export const LOADING_MESSAGES = [
   'Weaving your magical tale...',
@@ -64,3 +76,6 @@ export const LOADING_MESSAGES = [
   'Asking the dream clouds for inspiration...',
   'Sprinkling story dust...',
 ];
+
+// Session storage key
+export const STORY_SESSION_STORAGE_KEY = 'taleweaver.storySession';

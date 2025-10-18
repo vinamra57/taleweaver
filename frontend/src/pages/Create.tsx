@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StoryForm } from '../components/StoryForm';
 import { StoryLoadingState, ErrorState } from '../components/LoadingStates';
-import { Child } from '../lib/types';
+import { StartRequest, StoredStorySession } from '../lib/types';
+import { STORY_SESSION_STORAGE_KEY } from '../lib/constants';
 import api from '../lib/api';
 
 export const Create: React.FC = () => {
@@ -13,26 +14,39 @@ export const Create: React.FC = () => {
   const [presetKey, setPresetKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const preset = searchParams.get('preset');
-    if (preset) {
-      setPresetKey(preset);
-    }
+    setPresetKey(searchParams.get('preset'));
   }, [searchParams]);
 
-  const handleSubmit = async (child: Child) => {
+  const handleSubmit = async (request: StartRequest) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await api.startStory({ child });
+      const response = await api.startStory(request);
+      const sessionToStore: StoredStorySession = {
+        session_id: response.session_id,
+        child: request.child,
+        settings: response.settings,
+      };
 
-      // Store session data in sessionStorage
-      sessionStorage.setItem('sessionId', response.session_id);
-      sessionStorage.setItem('storyTitle', response.story_title);
-      sessionStorage.setItem('currentScene', JSON.stringify(response.initial_scene));
-      sessionStorage.setItem('childProfile', JSON.stringify(child));
+      if ('current_segment' in response) {
+        sessionToStore.interactive_state = {
+          current_segment: response.current_segment,
+          next_options: response.next_options,
+          remaining_checkpoints: response.remaining_checkpoints,
+          history: [response.current_segment],
+        };
+      } else {
+        sessionToStore.non_interactive_state = {
+          segments: response.segments,
+        };
+      }
 
-      // Navigate to play page
+      sessionStorage.setItem(
+        STORY_SESSION_STORAGE_KEY,
+        JSON.stringify(sessionToStore),
+      );
+
       navigate('/play');
     } catch (err: any) {
       setError(err.message || 'Failed to create story. Please try again.');
