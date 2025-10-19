@@ -31,6 +31,8 @@ export const Play: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentPlayingUrl, setCurrentPlayingUrl] = useState<string | null>(null);
 
   // Restore story session from storage
   useEffect(() => {
@@ -53,7 +55,16 @@ export const Play: React.FC = () => {
         }
 
         if (!parsed.interactive_state.history?.length) {
-          parsed.interactive_state.history = [parsed.interactive_state.current_segment];
+          parsed.interactive_state.history = [{
+            segment: parsed.interactive_state.current_segment,
+            chosenOption: undefined, // First segment has no choice
+          }];
+        } else if (parsed.interactive_state.history[0].segment === undefined) {
+          // Migrate old format (CheckpointSegment[]) to new format (HistoryEntry[])
+          parsed.interactive_state.history = parsed.interactive_state.history.map((item: any) => ({
+            segment: item.checkpoint_index !== undefined ? item : item.segment,
+            chosenOption: item.chosenOption,
+          }));
         }
       } else if (!parsed.non_interactive_state) {
         throw new Error('Missing story segments');
@@ -171,14 +182,58 @@ export const Play: React.FC = () => {
     };
   }, [sessionState]);
 
+  // Add event listeners to audio element
+  useEffect(() => {
+    const audioEl = audioRef.current;
+    if (!audioEl) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentPlayingUrl(null);
+    };
+
+    audioEl.addEventListener('play', handlePlay);
+    audioEl.addEventListener('pause', handlePause);
+    audioEl.addEventListener('ended', handleEnded);
+
+    return () => {
+      audioEl.removeEventListener('play', handlePlay);
+      audioEl.removeEventListener('pause', handlePause);
+      audioEl.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
   const playAudio = (audioUrl: string) => {
     const audioEl = audioRef.current;
     if (!audioEl) {
       return;
     }
 
-    audioEl.src = audioUrl;
+    // Only set src if it's a different audio file
+    if (audioEl.src !== audioUrl) {
+      audioEl.src = audioUrl;
+      setCurrentPlayingUrl(audioUrl);
+    }
+
     audioEl.play().catch(() => null);
+  };
+
+  const pauseAudio = () => {
+    const audioEl = audioRef.current;
+    if (!audioEl) {
+      return;
+    }
+    audioEl.pause();
+  };
+
+  const toggleAudio = (audioUrl: string) => {
+    if (currentPlayingUrl === audioUrl && isPlaying) {
+      pauseAudio();
+    } else {
+      playAudio(audioUrl);
+    }
   };
 
   const handleChoiceSelect = async (choiceId: ChoiceId) => {
@@ -194,7 +249,10 @@ export const Play: React.FC = () => {
     setError(null);
 
     try {
-      const { current_segment } = sessionState.interactive_state;
+      const { current_segment, next_options } = sessionState.interactive_state;
+
+      // Find the chosen option to save its text
+      const chosenOption = next_options.find(opt => opt.id === choiceId);
 
       const response = await api.continueStory({
         session_id: sessionState.session_id,
@@ -218,7 +276,13 @@ export const Play: React.FC = () => {
         const remaining =
           previousRemaining > 0 ? previousRemaining - 1 : 0;
 
-        const history = [...prev.interactive_state.history, nextSegment];
+        const history = [
+          ...prev.interactive_state.history,
+          {
+            segment: nextSegment,
+            chosenOption: chosenOption?.label, // Save the choice text
+          },
+        ];
 
         return {
           ...prev,
@@ -301,9 +365,9 @@ export const Play: React.FC = () => {
   const interactiveState = sessionState.interactive_state;
   const nonInteractiveState = sessionState.non_interactive_state;
 
-  const currentInteractiveSegment =
+  const currentInteractiveEntry =
     interactiveState?.history[interactiveState.history.length - 1];
-  const previousInteractiveSegments =
+  const previousInteractiveEntries =
     interactiveState?.history.slice(0, -1) ?? [];
 
   return (
@@ -336,22 +400,33 @@ export const Play: React.FC = () => {
         </p>
       </div>
 
-      {isInteractive && interactiveState && currentInteractiveSegment && (
+      {isInteractive && interactiveState && currentInteractiveEntry && (
         <>
-          {previousInteractiveSegments.length > 0 && (
+          {previousInteractiveEntries.length > 0 && (
             <div className="space-y-4 mb-6">
-              {previousInteractiveSegments.map((segment) => (
-                <div key={segment.checkpoint_index} className="bedtime-card bg-white/70">
+              {previousInteractiveEntries.map((entry) => (
+                <div key={entry.segment.checkpoint_index} className="bedtime-card bg-white/70">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xl text-bedtime-purple font-display font-medium">
-                      Checkpoint {segment.checkpoint_index}
+                      Checkpoint {entry.segment.checkpoint_index}
                     </h4>
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-bedtime-purple-pale text-bedtime-purple-dark uppercase tracking-wide">
-                      {formatEmotion(segment.emotion_hint)}
-                    </span>
+                    <button
+                      onClick={() => toggleAudio(entry.segment.audio_url)}
+                      className="w-10 h-10 rounded-full bg-bedtime-purple/10 hover:bg-bedtime-purple/20 text-bedtime-purple flex items-center justify-center text-lg transition-all"
+                      aria-label={currentPlayingUrl === entry.segment.audio_url && isPlaying ? "Pause" : "Replay"}
+                    >
+                      {currentPlayingUrl === entry.segment.audio_url && isPlaying ? '⏸' : '▶'}
+                    </button>
                   </div>
+                  {entry.chosenOption && (
+                    <div className="mb-3 p-3 bg-bedtime-yellow/10 rounded-lg border-l-4 border-bedtime-yellow">
+                      <p className="text-sm text-bedtime-purple/70 font-medium">
+                        <span className="text-bedtime-yellow-dark">You chose:</span> {entry.chosenOption}
+                      </p>
+                    </div>
+                  )}
                   <p className="text-bedtime-purple-dark font-body leading-relaxed whitespace-pre-wrap">
-                    {segment.text}
+                    {entry.segment.text}
                   </p>
                 </div>
               ))}
@@ -359,36 +434,52 @@ export const Play: React.FC = () => {
           )}
 
           <div className="bedtime-card mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">📖</span>
-                <h3 className="text-2xl text-bedtime-purple font-display font-medium">
-                  Checkpoint {currentInteractiveSegment.checkpoint_index}
-                </h3>
-              </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-bedtime-yellow/30 text-bedtime-yellow-dark uppercase tracking-wide">
-                Emotion: {formatEmotion(currentInteractiveSegment.emotion_hint)}
-              </span>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">📖</span>
+              <h3 className="text-2xl text-bedtime-purple font-display font-medium">
+                Checkpoint {currentInteractiveEntry.segment.checkpoint_index}
+              </h3>
             </div>
 
+            {currentInteractiveEntry.chosenOption && (
+              <div className="mb-4 p-3 bg-bedtime-yellow/10 rounded-lg border-l-4 border-bedtime-yellow">
+                <p className="text-sm text-bedtime-purple/70 font-medium">
+                  <span className="text-bedtime-yellow-dark">You chose:</span> {currentInteractiveEntry.chosenOption}
+                </p>
+              </div>
+            )}
+
             <p className="text-bedtime-purple-dark font-body text-lg leading-relaxed whitespace-pre-wrap mb-4">
-              {currentInteractiveSegment.text}
+              {currentInteractiveEntry.segment.text}
             </p>
 
             <div className="flex items-center gap-4 p-4 bg-bedtime-purple-pale/30 rounded-xl">
-              <button
-                onClick={() => playAudio(currentInteractiveSegment.audio_url)}
-                className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-                aria-label="Play narration"
-              >
-                ▶
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => playAudio(currentInteractiveEntry.segment.audio_url)}
+                  disabled={currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying}
+                  className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Play narration"
+                >
+                  ▶
+                </button>
+                <button
+                  onClick={pauseAudio}
+                  disabled={!(currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying)}
+                  className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Pause narration"
+                >
+                  ⏸
+                </button>
+              </div>
               <div className="flex-1">
                 <p className="text-sm text-bedtime-purple-dark font-medium mb-1">
                   Listen to this part
                 </p>
                 <p className="text-xs text-bedtime-purple/60">
-                  Tap to hear the narrated version
+                  {currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying
+                    ? 'Playing...'
+                    : 'Tap to hear the narrated version'}
                 </p>
               </div>
               <div className="text-xs text-bedtime-purple/60 font-semibold uppercase tracking-wide">
@@ -432,9 +523,6 @@ export const Play: React.FC = () => {
                           <p className="font-medium text-bedtime-purple-dark mb-1">
                             {option.label}
                           </p>
-                          <p className="text-sm text-bedtime-purple/60">
-                            Emotion hint: {formatEmotion(option.segment.emotion_hint)}
-                          </p>
                         </div>
                       </div>
                     </button>
@@ -469,18 +557,22 @@ export const Play: React.FC = () => {
                     Part {segment.checkpoint_index}
                   </h3>
                 </div>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-bedtime-purple-pale text-bedtime-purple-dark uppercase tracking-wide">
-                  {formatEmotion(segment.emotion_hint)}
-                </span>
               </div>
               <p className="text-bedtime-purple-dark font-body leading-relaxed whitespace-pre-wrap mb-4">
                 {segment.text}
               </p>
               <button
-                onClick={() => playAudio(segment.audio_url)}
-                className="btn-secondary w-full"
+                onClick={() => toggleAudio(segment.audio_url)}
+                className="btn-secondary w-full flex items-center justify-center gap-2"
               >
-                Listen to narration
+                <span className="text-lg">
+                  {currentPlayingUrl === segment.audio_url && isPlaying ? '⏸' : '▶'}
+                </span>
+                <span>
+                  {currentPlayingUrl === segment.audio_url && isPlaying
+                    ? 'Pause narration'
+                    : 'Listen to narration'}
+                </span>
               </button>
             </div>
           ))}

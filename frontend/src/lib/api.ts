@@ -209,6 +209,10 @@ export const api = {
         },
         current_segment: current,
         next_options,
+        history: [{
+          segment: current,
+          chosenOption: undefined, // First segment has no choice
+        }],
         // purely cosmetic estimate for the UI badge
         remaining_checkpoints: backendPayload.story_length,
       } as any; // matches StartResponseInteractive
