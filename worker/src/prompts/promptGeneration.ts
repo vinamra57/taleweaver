@@ -44,9 +44,18 @@ Create a detailed story prompt that includes:
 4. ${interactive ? `Key decision points that relate to ${moralFocus}` : `A clear narrative arc with a satisfying resolution`}
 5. ${child.gender === 'male' ? 'Age-appropriate themes and scenarios for boys' : 'Age-appropriate themes and scenarios for girls'}
 
+ALSO create a voice description for the story's narrator:
+- The voice should match the story theme and the child's profile
+- Consider the child's age (${child.age_range}) for appropriate tone
+- Reflect the story's emotional mood (e.g., warm, adventurous, mysterious, gentle)
+- CRITICAL: Must be at least 100 characters long (this is required for voice generation)
+- Be descriptive and detailed - explain the voice's qualities, tone, pacing, and emotional characteristics
+- Example: "A warm, gentle female voice with a curious, wonder-filled tone perfect for space adventures. The voice should sound encouraging and full of excitement, like a kind teacher sharing the secrets of the universe with wide-eyed students."
+
 Return STRICT JSON only:
 {
   "story_prompt": "detailed prompt for story generation (3-5 sentences)",
-  "story_theme": "optional one-word theme (e.g., friendship, adventure, discovery)"
+  "story_theme": "optional one-word theme (e.g., friendship, adventure, discovery)",
+  "voice_description": "description of the narrator's voice (1-2 sentences)"
 }`;
 }

@@ -15,6 +15,7 @@ import {
   generateNonInteractiveStory,
   generateFirstSegment,
 } from '../services/gemini';
+import { generateVoiceFromDescription } from '../services/elevenlabs';
 import { saveSession } from '../services/kv';
 import { calculateStoryStructure, generateSegmentId } from '../services/storyStructure';
 import { createSegmentWithAudio } from '../services/branchOrchestrator';
@@ -70,9 +71,11 @@ export async function handleStoryStart(c: Context): Promise<Response> {
 
     const promptResponse = await generateStoryPrompt(promptGenPrompt, env);
     const detailedStoryPrompt = promptResponse.story_prompt;
+    const voiceDescription = promptResponse.voice_description;
 
     logger.info('Detailed story prompt generated', {
       theme: promptResponse.story_theme,
+      voiceDescription,
     });
 
     // Get worker URL from request
@@ -93,16 +96,24 @@ export async function handleStoryStart(c: Context): Promise<Response> {
         structure.total_words
       );
 
-      const storyResponse = await generateNonInteractiveStory(storyPrompt, env);
+      // PARALLEL EXECUTION: Generate voice and story text simultaneously
+      const [voiceId, storyResponse] = await Promise.all([
+        generateVoiceFromDescription(voiceDescription, env),
+        generateNonInteractiveStory(storyPrompt, env),
+      ]);
 
-      // Create segment with audio
+      logger.info('Voice and story generated in parallel', { voiceId });
+
+      // Create segment with audio using the generated voice
       const segment = await createSegmentWithAudio(
         sessionId,
         'segment_1',
         storyResponse.story_text,
         0,
         env,
-        workerUrl
+        workerUrl,
+        undefined, // no choice text for non-interactive
+        voiceId
       );
 
       // Create and save session
@@ -113,6 +124,8 @@ export async function handleStoryStart(c: Context): Promise<Response> {
         interactive: false,
         moral_focus: validatedRequest.moral_focus,
         story_prompt: detailedStoryPrompt,
+        narrator_voice_id: voiceId,
+        voice_description: voiceDescription,
         total_checkpoints: 0,
         current_checkpoint: 0,
         words_per_segment: structure.words_per_segment,
@@ -149,16 +162,24 @@ export async function handleStoryStart(c: Context): Promise<Response> {
       structure.words_per_segment
     );
 
-    const firstSegmentResponse = await generateFirstSegment(firstSegmentPrompt, env);
+    // PARALLEL EXECUTION: Generate voice and first segment simultaneously
+    const [voiceId, firstSegmentResponse] = await Promise.all([
+      generateVoiceFromDescription(voiceDescription, env),
+      generateFirstSegment(firstSegmentPrompt, env),
+    ]);
 
-    // Create first segment (start → checkpoint 1)
+    logger.info('Voice and first segment generated in parallel', { voiceId });
+
+    // Create first segment (start → checkpoint 1) using the generated voice
     const firstSegment = await createSegmentWithAudio(
       sessionId,
       generateSegmentId(0), // segment_1
       firstSegmentResponse.segment_text,
       0,
       env,
-      workerUrl
+      workerUrl,
+      undefined, // no choice text for first segment
+      voiceId
     );
 
     // Create and save initial session (without branches yet)
@@ -169,6 +190,8 @@ export async function handleStoryStart(c: Context): Promise<Response> {
       interactive: true,
       moral_focus: validatedRequest.moral_focus,
       story_prompt: detailedStoryPrompt,
+      narrator_voice_id: voiceId,
+      voice_description: voiceDescription,
       total_checkpoints: structure.total_checkpoints,
       current_checkpoint: 0,
       words_per_segment: structure.words_per_segment,

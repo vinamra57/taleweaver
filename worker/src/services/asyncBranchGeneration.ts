@@ -43,7 +43,10 @@ export async function generateFirstBranchesAsync(
     // Generate first segment with branches
     const firstSegmentResponse = await generateFirstSegment(firstSegmentPrompt, env);
 
-    // Create both branches in parallel (for checkpoint 0 → 1)
+    // Create both branches in parallel (for checkpoint 0 → 1) using session voice
+    // Fallback to default voice if narrator_voice_id is not set (for old sessions)
+    const voiceId = session.narrator_voice_id || env.ELEVENLABS_VOICE_ID;
+
     const branches = await createBranchesInParallel(
       sessionId,
       firstSegmentResponse.choice_a.text,
@@ -53,7 +56,8 @@ export async function generateFirstBranchesAsync(
       1, // next checkpoint number
       'segment_2', // base ID for next segments
       env,
-      workerUrl
+      workerUrl,
+      voiceId
     );
 
     // Update session with generated branches
@@ -131,7 +135,10 @@ export async function generateNextBranchesAsync(
     // Determine next checkpoint number
     const nextCheckpointNumber = currentCheckpoint + 1;
 
-    // Generate both branches in parallel
+    // Generate both branches in parallel using session voice
+    // Fallback to default voice if narrator_voice_id is not set (for old sessions)
+    const voiceId = session.narrator_voice_id || env.ELEVENLABS_VOICE_ID;
+
     const branches = await createBranchesInParallel(
       sessionId,
       continuationResponse.choice_a?.text || 'Choice A',
@@ -141,7 +148,8 @@ export async function generateNextBranchesAsync(
       nextCheckpointNumber,
       `segment_${nextCheckpointNumber + 1}`,
       env,
-      workerUrl
+      workerUrl,
+      voiceId
     );
 
     // Update session with generated branches

@@ -14,6 +14,7 @@ const logger = createLogger('Branch Orchestrator');
 /**
  * Create a story segment with audio
  * Generates TTS and uploads to R2
+ * @param voiceId - Optional custom voice ID for narration
  */
 export async function createSegmentWithAudio(
   sessionId: string,
@@ -22,7 +23,8 @@ export async function createSegmentWithAudio(
   checkpointNumber: number,
   env: Env,
   workerUrl: string,
-  choiceText?: string
+  choiceText?: string,
+  voiceId?: string
 ): Promise<StorySegment> {
   try {
     logger.info(`Creating segment with audio: ${segmentId}`);
@@ -31,7 +33,8 @@ export async function createSegmentWithAudio(
     const audioBuffer = await generateTTS(
       segmentText,
       'warm', // Default emotion for bedtime stories
-      env
+      env,
+      voiceId
     );
 
     // Upload to R2
@@ -59,6 +62,7 @@ export async function createSegmentWithAudio(
 /**
  * Create both branches in parallel (for pre-generation)
  * This is called after user makes a choice to generate the NEXT two branches
+ * @param voiceId - Optional custom voice ID for narration
  */
 export async function createBranchesInParallel(
   sessionId: string,
@@ -69,7 +73,8 @@ export async function createBranchesInParallel(
   nextCheckpointNumber: number,
   baseSegmentId: string,
   env: Env,
-  workerUrl: string
+  workerUrl: string,
+  voiceId?: string
 ): Promise<[StoryBranch, StoryBranch]> {
   try {
     logger.info(`Creating branches in parallel for checkpoint ${nextCheckpointNumber}`);
@@ -85,7 +90,8 @@ export async function createBranchesInParallel(
           nextCheckpointNumber,
           env,
           workerUrl,
-          choiceTextA
+          choiceTextA,
+          voiceId
         );
 
         const branch: StoryBranch = {
@@ -106,7 +112,8 @@ export async function createBranchesInParallel(
           nextCheckpointNumber,
           env,
           workerUrl,
-          choiceTextB
+          choiceTextB,
+          voiceId
         );
 
         const branch: StoryBranch = {

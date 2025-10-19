@@ -39,11 +39,13 @@ const VOICE_SETTINGS = {
  * Generate TTS audio with ElevenLabs
  * Returns audio as ArrayBuffer
  * If DISABLE_TTS is set to 'true', returns a minimal silent audio buffer
+ * @param voiceId - Optional custom voice ID. If not provided, uses env.ELEVENLABS_VOICE_ID
  */
 export async function generateTTS(
   text: string,
   emotionHint: EmotionHint,
   env: Env,
+  voiceId?: string,
   maxRetries = 1
 ): Promise<ArrayBuffer> {
   // Check if TTS is disabled for testing
@@ -76,12 +78,12 @@ export async function generateTTS(
         { emotionHint, textLength: text.length }
       );
 
-      const voiceId = env.ELEVENLABS_VOICE_ID;
+      const selectedVoiceId = voiceId || env.ELEVENLABS_VOICE_ID;
       const modelId = env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
       const voiceSettings = VOICE_SETTINGS[emotionHint] || VOICE_SETTINGS.warm;
 
       const response = await fetch(
-        `${ELEVENLABS_API_URL}/${voiceId}`,
+        `${ELEVENLABS_API_URL}/${selectedVoiceId}`,
         {
           method: 'POST',
           headers: {
@@ -132,6 +134,131 @@ export async function generateTTS(
   }
 
   throw new ElevenLabsError('Unexpected error in retry loop');
+}
+
+/**
+ * Generate a custom voice from a text description
+ * Returns voice ID to use for TTS
+ * Falls back to default voice if generation fails
+ */
+export async function generateVoiceFromDescription(
+  description: string,
+  env: Env,
+  maxRetries = 1
+): Promise<string> {
+  const defaultVoiceId = env.ELEVENLABS_VOICE_ID;
+
+  // Check if TTS is disabled for testing
+  if (env.DISABLE_TTS === 'true') {
+    logger.info('TTS disabled - returning default voice ID');
+    return defaultVoiceId;
+  }
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      logger.debug(
+        `Generating voice from description (attempt ${attempt + 1}/${maxRetries + 1})`,
+        { description }
+      );
+
+      // Step 1: Generate voice previews using correct endpoint
+      // Use the voice description itself as preview text (Gemini generates 100+ char descriptions)
+      const generateResponse = await fetch(
+        'https://api.elevenlabs.io/v1/text-to-voice/create-previews',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': env.ELEVENLABS_API_KEY,
+          },
+          body: JSON.stringify({
+            voice_description: description,
+            text: description, // Use the description itself as preview text (100+ chars)
+          }),
+        }
+      );
+
+      if (!generateResponse.ok) {
+        const errorText = await generateResponse.text();
+        throw new ElevenLabsError(
+          `Voice generation API returned ${generateResponse.status}: ${errorText}`
+        );
+      }
+
+      const generateData = (await generateResponse.json()) as any;
+      const previews = generateData.previews;
+
+      if (!previews || !Array.isArray(previews) || previews.length === 0) {
+        throw new ElevenLabsError('No voice previews generated in response');
+      }
+
+      // Use the first preview's generated_voice_id
+      const generatedVoiceId = previews[0].generated_voice_id;
+
+      if (!generatedVoiceId) {
+        throw new ElevenLabsError('No generated_voice_id in first preview');
+      }
+
+      logger.info('Voice preview generated successfully', {
+        generatedVoiceId,
+        previewCount: previews.length
+      });
+
+      // Step 2: Add the voice to library to make it permanent and usable for TTS
+      const addToLibraryResponse = await fetch(
+        'https://api.elevenlabs.io/v1/text-to-voice',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': env.ELEVENLABS_API_KEY,
+          },
+          body: JSON.stringify({
+            voice_name: `TaleWeaver-${Date.now()}`, // Unique name for the voice
+            voice_description: description, // Description for the voice
+            generated_voice_id: generatedVoiceId, // The temporary voice ID from previews
+          }),
+        }
+      );
+
+      if (!addToLibraryResponse.ok) {
+        const errorText = await addToLibraryResponse.text();
+        throw new ElevenLabsError(
+          `Failed to add voice to library (${addToLibraryResponse.status}): ${errorText}`
+        );
+      }
+
+      const addToLibraryData = (await addToLibraryResponse.json()) as any;
+      const permanentVoiceId = addToLibraryData.voice_id;
+
+      if (!permanentVoiceId) {
+        throw new ElevenLabsError('No voice_id returned from add-to-library');
+      }
+
+      logger.info('Voice added to library successfully', {
+        temporaryId: generatedVoiceId,
+        permanentId: permanentVoiceId
+      });
+
+      return permanentVoiceId;
+    } catch (error) {
+      if (attempt < maxRetries) {
+        logger.warn(
+          `Voice generation failed (attempt ${attempt + 1}), retrying...`,
+          error
+        );
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } else {
+        logger.error('Voice generation failed after retries, using default voice', error);
+        // Return default voice as fallback
+        return defaultVoiceId;
+      }
+    }
+  }
+
+  // Fallback to default voice
+  logger.warn('Falling back to default voice');
+  return defaultVoiceId;
 }
 
 /**

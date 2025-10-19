@@ -126,6 +126,10 @@ export const SessionSchema = z.object({
   current_checkpoint: z.number().int(), // Current checkpoint (0 = start)
   words_per_segment: z.number().int(), // Calculated word count per segment
 
+  // Voice metadata
+  narrator_voice_id: z.string().optional(), // Generated ElevenLabs voice ID for this story (optional for backward compatibility)
+  voice_description: z.string().optional(), // Description of the narrator's voice (for debugging)
+
   // Branch tracking
   chosen_path: z.array(BranchChoiceSchema), // History of choices ["A", "B", "A"]
 
@@ -151,6 +155,7 @@ export const SessionSchema = z.object({
 export const GeminiPromptResponseSchema = z.object({
   story_prompt: z.string(), // Detailed prompt for story generation
   story_theme: z.string().optional(), // Optional theme extracted
+  voice_description: z.string(), // Description of narrator's voice for voice generation
 });
 
 // Phase 2: Story segment generation (non-interactive)
