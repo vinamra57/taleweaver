@@ -1,19 +1,20 @@
 /**
  * Branch Orchestrator Service
- * Handles generation of story branches and parallel TTS generation
+ * Handles generation of story branches with parallel TTS and image generation
  */
 
 import type { Env } from '../types/env';
 import type { StorySegment, StoryBranch } from '../schemas/story';
 import { generateTTS } from './elevenlabs';
-import { uploadAudio, getAudioUrl } from './r2';
+import { generateImage } from './imageGeneration';
+import { uploadAudio, getAudioUrl, uploadImage, getImageUrl } from './r2';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Branch Orchestrator');
 
 /**
- * Create a story segment with audio
- * Generates TTS and uploads to R2
+ * Create a story segment with audio and image
+ * Generates TTS and image in parallel, uploads to R2
  */
 export async function createSegmentWithAudio(
   sessionId: string,
@@ -25,25 +26,34 @@ export async function createSegmentWithAudio(
   choiceText?: string
 ): Promise<StorySegment> {
   try {
-    logger.info(`Creating segment with audio: ${segmentId}`);
+    logger.info(`Creating segment with audio and image: ${segmentId}`);
 
-    // Generate TTS audio
-    const audioBuffer = await generateTTS(
-      segmentText,
-      'warm', // Default emotion for bedtime stories
-      env
-    );
+    // Generate audio and image in parallel
+    const [audioUrl, imageUrl] = await Promise.all([
+      // Audio pipeline
+      (async () => {
+        const audioBuffer = await generateTTS(
+          segmentText,
+          'warm', // Default emotion for bedtime stories
+          env
+        );
+        const audioKey = await uploadAudio(sessionId, segmentId, audioBuffer, env);
+        return getAudioUrl(audioKey, env, workerUrl);
+      })(),
 
-    // Upload to R2
-    const audioKey = await uploadAudio(sessionId, segmentId, audioBuffer, env);
-
-    // Get audio URL
-    const audioUrl = getAudioUrl(audioKey, env, workerUrl);
+      // Image pipeline (NEW)
+      (async () => {
+        const imageBuffer = await generateImage(segmentText, env);
+        const imageKey = await uploadImage(sessionId, segmentId, imageBuffer, env);
+        return getImageUrl(imageKey, env, workerUrl);
+      })(),
+    ]);
 
     const segment: StorySegment = {
       id: segmentId,
       text: segmentText,
       audio_url: audioUrl,
+      image_url: imageUrl, // Generated image (required - will throw if generation fails)
       checkpoint_number: checkpointNumber,
       choice_text: choiceText,
     };

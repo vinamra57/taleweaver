@@ -10,7 +10,7 @@ import { handleStoryStart } from './routes/storyStart';
 import { handleStoryContinue } from './routes/storyContinue';
 import { handleBranchStatus } from './routes/branchStatus';
 import { handleGetBranches } from './routes/getBranches';
-import { getAudio } from './services/r2';
+import { getAudio, getImage } from './services/r2';
 import { TaleWeaverError } from './utils/errors';
 import { createLogger } from './utils/logger';
 
@@ -36,7 +36,8 @@ app.get('/', (c) => {
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
       status: 'GET /api/story/status/:sessionId',
-      audio: 'GET /audio/:sessionId/:sceneId.mp3',
+      audio: 'GET /audio/:sessionId/:sceneId',
+      image: 'GET /image/:sessionId/:sceneId',
     },
   });
 });
@@ -71,6 +72,33 @@ app.get('/audio/:sessionId/:sceneId', async (c) => {
   } catch (error) {
     logger.error('Audio serve failed', error);
     return c.json({ error: 'Failed to serve audio' }, 500);
+  }
+});
+
+// Image proxy endpoint (for serving R2 image files)
+app.get('/image/:sessionId/:sceneId', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId');
+    const sceneId = c.req.param('sceneId');
+    const key = `${sessionId}/${sceneId}`;
+
+    logger.debug(`Serving image: ${key}`);
+
+    const imageBuffer = await getImage(key, c.env);
+
+    if (!imageBuffer) {
+      return c.json({ error: 'Image not found' }, 404);
+    }
+
+    return new Response(imageBuffer, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400', // 24 hour cache for images
+      },
+    });
+  } catch (error) {
+    logger.error('Image serve failed', error);
+    return c.json({ error: 'Failed to serve image' }, 500);
   }
 });
 

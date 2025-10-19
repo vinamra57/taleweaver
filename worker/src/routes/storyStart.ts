@@ -161,6 +161,12 @@ export async function handleStoryStart(c: Context): Promise<Response> {
       workerUrl
     );
 
+    logger.info('First segment created', {
+      hasImage: !!firstSegment.image_url,
+      imageUrl: firstSegment.image_url,
+      hasAudio: !!firstSegment.audio_url,
+    });
+
     // Create and save initial session (without branches yet)
     const session: Session = {
       session_id: sessionId,

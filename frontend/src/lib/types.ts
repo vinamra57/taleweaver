@@ -36,6 +36,7 @@ interface SegmentBase {
   text: string;
   emotion_hint: EmotionHint;
   audio_url: string;
+  image_url: string; // Generated illustration (REQUIRED)
 }
 
 export interface CheckpointSegment extends SegmentBase {

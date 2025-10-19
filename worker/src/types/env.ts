@@ -22,4 +22,6 @@ export interface Env {
   SESSION_TTL_HOURS: string;
   R2_PUBLIC_URL?: string; // Optional: for public bucket URLs
   DISABLE_TTS?: string; // Optional: set to 'true' to disable TTS calls during testing
+  DISABLE_IMAGES?: string; // Optional: set to 'true' to disable image generation during testing
+  IMAGEN_ASPECT_RATIO?: string; // Optional: aspect ratio for generated images (default: '4:3')
 }

@@ -49,6 +49,7 @@ export const StorySegmentSchema = z.object({
   id: z.string(), // "segment_1", "segment_2a", "segment_2b", etc.
   text: z.string(),
   audio_url: z.string().url(),
+  image_url: z.string().url(), // Generated illustration for this segment (REQUIRED)
   checkpoint_number: z.number().int().min(0), // 0 = start, 1 = first checkpoint, etc.
   choice_text: z.string().optional(), // The choice text that leads to this segment (if applicable)
 });

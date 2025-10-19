@@ -59,6 +59,13 @@ export class WorkersAIError extends ExternalAPIError {
   }
 }
 
+export class ImageGenerationError extends ExternalAPIError {
+  constructor(message: string) {
+    super('Imagen', message);
+    this.name = 'ImageGenerationError';
+  }
+}
+
 export class StorageError extends TaleWeaverError {
   constructor(message: string, operation: 'KV' | 'R2') {
     super(`${operation} storage error: ${message}`, 500, 'STORAGE_ERROR');
