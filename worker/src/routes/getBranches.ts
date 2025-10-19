@@ -53,16 +53,21 @@ export async function handleGetBranches(c: Context): Promise<Response> {
       } as GetBranchesResponse, 200);
     }
 
-    // Reconstruct branches from segments
+    // Reconstruct branches from segments with choice quality
+    const branchAInfo = session.branches_metadata?.[segmentA.id];
+    const branchBInfo = session.branches_metadata?.[segmentB.id];
+
     const branches: StoryBranch[] = [
       {
         choice_value: 'A' as const,
         choice_text: segmentA.choice_text || 'Choice A',
+        choice_quality: branchAInfo?.choice_quality || 'growth_oriented',
         segment: segmentA,
       },
       {
         choice_value: 'B' as const,
         choice_text: segmentB.choice_text || 'Choice B',
+        choice_quality: branchBInfo?.choice_quality || 'less_ideal',
         segment: segmentB,
       },
     ];

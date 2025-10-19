@@ -50,8 +50,10 @@ export async function generateFirstBranchesAsync(
     const branches = await createBranchesInParallel(
       sessionId,
       firstSegmentResponse.choice_a.text,
+      firstSegmentResponse.choice_a.quality,
       firstSegmentResponse.choice_a.next_segment,
       firstSegmentResponse.choice_b.text,
+      firstSegmentResponse.choice_b.quality,
       firstSegmentResponse.choice_b.next_segment,
       1, // next checkpoint number
       'segment_2', // base ID for next segments
@@ -62,6 +64,14 @@ export async function generateFirstBranchesAsync(
 
     // Update session with generated branches
     session.segments.push(branches[0].segment, branches[1].segment);
+
+    // Store branches metadata for choice quality tracking
+    if (!session.branches_metadata) {
+      session.branches_metadata = {};
+    }
+    session.branches_metadata[branches[0].segment.id] = branches[0];
+    session.branches_metadata[branches[1].segment.id] = branches[1];
+
     session.next_branches_ready = true;
     session.generation_in_progress = false;
     await saveSession(session, env);
@@ -142,8 +152,10 @@ export async function generateNextBranchesAsync(
     const branches = await createBranchesInParallel(
       sessionId,
       continuationResponse.choice_a?.text || 'Choice A',
+      continuationResponse.choice_a?.quality || 'growth_oriented',
       continuationResponse.choice_a?.next_segment || '',
       continuationResponse.choice_b?.text || 'Choice B',
+      continuationResponse.choice_b?.quality || 'less_ideal',
       continuationResponse.choice_b?.next_segment || '',
       nextCheckpointNumber,
       `segment_${nextCheckpointNumber + 1}`,
@@ -154,6 +166,14 @@ export async function generateNextBranchesAsync(
 
     // Update session with generated branches
     session.segments.push(branches[0].segment, branches[1].segment);
+
+    // Store branches metadata for choice quality tracking
+    if (!session.branches_metadata) {
+      session.branches_metadata = {};
+    }
+    session.branches_metadata[branches[0].segment.id] = branches[0];
+    session.branches_metadata[branches[1].segment.id] = branches[1];
+
     session.next_branches_ready = true;
     session.generation_in_progress = false;
     await saveSession(session, env);

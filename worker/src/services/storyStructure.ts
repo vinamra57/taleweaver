@@ -91,16 +91,79 @@ export function isFinalCheckpoint(
 }
 
 /**
- * Get complexity level based on age range
+ * Age-appropriate language guidelines for story generation
+ */
+export interface AgeAppropriateGuidelines {
+  complexity: string;
+  vocabulary_level: string;
+  sentence_length: string;
+  reading_level: string;
+  max_syllables_per_word: number;
+  example_vocabulary: string[];
+  avoid_vocabulary: string[];
+}
+
+/**
+ * Get comprehensive age-appropriate language guidelines
+ */
+export function getAgeAppropriateGuidelines(ageRange: '4-6' | '7-9' | '10-12'): AgeAppropriateGuidelines {
+  const guidelines: Record<string, AgeAppropriateGuidelines> = {
+    '4-6': {
+      complexity: 'very simple',
+      vocabulary_level: 'Basic sight words and common nouns (dog, cat, toy, friend, happy, sad)',
+      sentence_length: 'Very short sentences (5-10 words). Use simple subject-verb-object structure.',
+      reading_level: 'Pre-K to 1st grade (Lexile 0-200L)',
+      max_syllables_per_word: 2,
+      example_vocabulary: [
+        'happy', 'sad', 'fun', 'play', 'friend', 'share', 'help', 'kind',
+        'try', 'good', 'nice', 'toy', 'game', 'smile', 'hug', 'run', 'jump'
+      ],
+      avoid_vocabulary: [
+        'anxious', 'frustrating', 'disappointed', 'complex', 'difficult',
+        'challenging', 'situation', 'consequences', 'relationship'
+      ],
+    },
+    '7-9': {
+      complexity: 'moderate',
+      vocabulary_level: 'Elementary vocabulary with some descriptive words (brave, worried, excited, problem)',
+      sentence_length: 'Moderate sentences (10-15 words). Can use compound sentences with "and" or "but".',
+      reading_level: '2nd to 3rd grade (Lexile 300-600L)',
+      max_syllables_per_word: 3,
+      example_vocabulary: [
+        'brave', 'worried', 'excited', 'problem', 'decision', 'together',
+        'honest', 'courage', 'mistake', 'apologize', 'practice', 'improve'
+      ],
+      avoid_vocabulary: [
+        'contemplated', 'sophisticated', 'consequences', 'responsibility',
+        'overwhelming', 'circumstance', 'perspective', 'theoretical'
+      ],
+    },
+    '10-12': {
+      complexity: 'more complex',
+      vocabulary_level: 'Advanced elementary vocabulary with nuanced emotional and social terms',
+      sentence_length: 'Complex sentences (15-20 words). Can use subordinate clauses and varied structure.',
+      reading_level: '4th to 6th grade (Lexile 600-900L)',
+      max_syllables_per_word: 4,
+      example_vocabulary: [
+        'determined', 'anxious', 'disappointed', 'encouraging', 'responsible',
+        'consequences', 'persevere', 'compassionate', 'understanding', 'challenge'
+      ],
+      avoid_vocabulary: [
+        'unprecedented', 'philosophical', 'theoretical', 'comprehensive',
+        'methodological', 'introspective', 'existential'
+      ],
+    },
+  };
+
+  return guidelines[ageRange];
+}
+
+/**
+ * Get complexity level based on age range (legacy function for backward compatibility)
  * This is used to adjust vocabulary and sentence structure
  */
 export function getComplexityLevel(ageRange: '4-6' | '7-9' | '10-12'): string {
-  const complexityMap = {
-    '4-6': 'very simple',
-    '7-9': 'moderate',
-    '10-12': 'more complex',
-  };
-  return complexityMap[ageRange];
+  return getAgeAppropriateGuidelines(ageRange).complexity;
 }
 
 /**

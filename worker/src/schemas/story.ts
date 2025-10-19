@@ -1,8 +1,10 @@
 import { z } from 'zod';
+import { ChoiceQualitySchema, ChoiceRecordSchema } from './selThemes';
 
 /**
  * Zod Schemas for TaleWeaver API (Branching Interactive Stories)
  * Updated to match new architecture with checkpoints and pre-generation
+ * Enhanced with choice quality tracking for educational value
  */
 
 // ============================================================================
@@ -62,6 +64,7 @@ export const StorySegmentSchema = z.object({
 export const StoryBranchSchema = z.object({
   choice_text: z.string(), // The text of the choice (e.g., "Share the toy")
   choice_value: BranchChoiceSchema, // "A" or "B"
+  choice_quality: ChoiceQualitySchema, // Quality indicator: growth_oriented or less_ideal
   segment: StorySegmentSchema,
 });
 
@@ -136,9 +139,11 @@ export const SessionSchema = z.object({
 
   // Branch tracking
   chosen_path: z.array(BranchChoiceSchema), // History of choices ["A", "B", "A"]
+  choice_records: z.array(ChoiceRecordSchema).optional(), // Detailed choice tracking with quality indicators
 
   // Pre-generated content
   segments: z.array(StorySegmentSchema), // All generated segments (including pre-generated branches)
+  branches_metadata: z.record(z.string(), StoryBranchSchema).optional(), // Map of segment_id -> branch info (for tracking choice quality)
 
   // Async generation tracking
   next_branches_ready: z.boolean().default(false), // Whether next branches are generated
@@ -173,10 +178,12 @@ export const GeminiFirstSegmentResponseSchema = z.object({
   choice_prompt: z.string(), // Question for the user (e.g., "What should Maya do?")
   choice_a: z.object({
     text: z.string(), // Choice text (e.g., "Share the toy")
+    quality: ChoiceQualitySchema.optional().default('growth_oriented'), // Quality indicator (optional for backward compatibility)
     next_segment: z.string(), // Story continuation if A is chosen
   }),
   choice_b: z.object({
     text: z.string(),
+    quality: ChoiceQualitySchema.optional().default('less_ideal'), // Quality indicator (optional for backward compatibility)
     next_segment: z.string(),
   }),
 });
@@ -186,10 +193,12 @@ export const GeminiContinuationResponseSchema = z.object({
   choice_prompt: z.string().optional(), // Only if not the final segment
   choice_a: z.object({
     text: z.string(),
+    quality: ChoiceQualitySchema.optional().default('growth_oriented'), // Quality indicator (optional for backward compatibility)
     next_segment: z.string(),
   }).optional(),
   choice_b: z.object({
     text: z.string(),
+    quality: ChoiceQualitySchema.optional().default('less_ideal'), // Quality indicator (optional for backward compatibility)
     next_segment: z.string(),
   }).optional(),
 });

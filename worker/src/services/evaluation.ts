@@ -1,19 +1,27 @@
 /**
  * Evaluation Service - Analyzes child's decision-making patterns
  * Uses Gemini to provide developmental feedback based on story choices
+ * Enhanced with SEL competencies and GROW themes tracking
  */
 
 import type { Env } from '../types/env';
 import { GeminiError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
 import { z } from 'zod';
+import {
+  MORAL_THEME_MAP,
+  getSELCompetencyDescription,
+  getGROWThemeName,
+  type ChoiceQuality
+} from '../schemas/selThemes';
+import type { MoralFocus } from '../schemas/story';
 
 const logger = createLogger('Evaluation Service');
 
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-// Evaluation request interface
+// Evaluation request interface - enhanced with choice quality tracking
 export interface EvaluationRequest {
   child: {
     name: string;
@@ -21,23 +29,34 @@ export interface EvaluationRequest {
     gender: string;
     interests: string[];
   };
-  moral_focus: string;
+  moral_focus: MoralFocus;
   story_history: Array<{
     segment_text: string;
     chosen_option?: string;
+    choice_quality?: ChoiceQuality; // Track if choice was growth-oriented or less ideal
     checkpoint_index: number;
   }>;
   ending_reflection?: string;
 }
 
-// Evaluation response interface - simplified to one paragraph
+// Enhanced evaluation response with decision analysis
 export interface EvaluationResponse {
-  summary: string; // One paragraph summary of the child's choices and development
+  summary: string; // Main evaluation paragraph
+  growth_oriented_count?: number; // Number of growth-oriented choices
+  total_choices?: number; // Total choices made
+  key_moments?: string[]; // Up to 3 key decision moments
+  sel_themes?: string[]; // SEL competencies demonstrated
+  grow_themes?: string[]; // GROW themes demonstrated
 }
 
-// Zod schema for Gemini response validation
+// Zod schema for Gemini response validation - enhanced
 const EvaluationResponseSchema = z.object({
-  summary: z.string().min(50).max(500), // One paragraph, 50-500 characters
+  summary: z.string().min(50).max(600), // Extended for richer feedback
+  growth_oriented_count: z.number().int().min(0).optional(),
+  total_choices: z.number().int().min(1).optional(),
+  key_moments: z.array(z.string()).max(3).optional(), // Up to 3 key moments
+  sel_themes: z.array(z.string()).optional(),
+  grow_themes: z.array(z.string()).optional(),
 });
 
 /**
@@ -127,40 +146,91 @@ function extractEvaluationJSON(text: string): unknown {
 }
 
 /**
- * Build evaluation prompt for Gemini
+ * Build enhanced evaluation prompt for Gemini with decision analysis
  */
 function buildEvaluationPrompt(request: EvaluationRequest): string {
   const { child, moral_focus, story_history } = request;
+  const moralMapping = MORAL_THEME_MAP[moral_focus];
 
-  const choicesText = story_history
+  // Build detailed choice analysis
+  const choicesWithQuality = story_history
     .filter(entry => entry.chosen_option)
-    .map((entry, index) =>
-      `Choice ${index + 1}: "${entry.chosen_option}" (led to: ${entry.segment_text.substring(0, 100)}...)`
-    )
-    .join('\n');
+    .map((entry, index) => {
+      const quality = entry.choice_quality || 'unknown';
+      const qualityLabel = quality === 'growth_oriented' ? '[GROWTH-ORIENTED]' : '[LESS IDEAL]';
+      return `Choice ${index + 1}: "${entry.chosen_option}" ${qualityLabel}
+  Outcome: ${entry.segment_text.substring(0, 120)}...`;
+    })
+    .join('\n\n');
 
-  return `You are a child development expert. Analyze the following interactive story session and provide a brief, positive evaluation.
+  // Count growth-oriented choices
+  const growthOrientedCount = story_history.filter(
+    entry => entry.choice_quality === 'growth_oriented'
+  ).length;
+  const totalChoices = story_history.filter(entry => entry.chosen_option).length;
+
+  // Get SEL competencies for this moral focus
+  const selCompetencies = moralMapping.sel_competencies
+    .map(comp => getSELCompetencyDescription(comp, child.age_group))
+    .join(', ');
+
+  const growThemes = moralMapping.grow_themes
+    .map(theme => getGROWThemeName(theme))
+    .join(', ');
+
+  return `You are a child development expert specializing in Social-Emotional Learning (SEL). Analyze this interactive story session and provide developmental feedback.
 
 CHILD INFORMATION:
 - Name: ${child.name}
 - Age Group: ${child.age_group}
 - Story Moral Focus: ${moral_focus}
 
+DEVELOPMENTAL FRAMEWORK:
+- SEL Competencies Targeted: ${selCompetencies}
+- GROW Themes (The Advocate): ${growThemes}
+- Growth-Oriented Choices Made: ${growthOrientedCount} out of ${totalChoices}
+
 STORY CHOICES MADE:
-${choicesText}
+${choicesWithQuality}
 
-Based on ${child.name}'s choices in this story about ${moral_focus}, write ONE SHORT PARAGRAPH (3-4 sentences) that:
-1. Highlights the positive qualities shown through their choices
-2. Relates to the moral focus (${moral_focus})
-3. Is encouraging and age-appropriate for ${child.age_group} year olds
-4. Is warm and celebratory in tone
+GROWTH KEYWORDS FOR ${moral_focus}:
+- Positive indicators: ${moralMapping.growth_keywords.slice(0, 5).join(', ')}
+- Learning opportunities: ${moralMapping.less_ideal_keywords.slice(0, 3).join(', ')}
 
-Return JSON format:
+Based on ${child.name}'s choices, create an evaluation that:
+
+1. SUMMARY (4-5 sentences):
+   - Celebrate what ${child.name} did well
+   - Explain how their choices demonstrated ${moral_focus}
+   - Mention specific moments that showed growth
+   - If some choices were less ideal, frame as "learning opportunities" (never negative)
+   - Make it warm, encouraging, and age-appropriate for ${child.age_group}
+
+2. KEY MOMENTS (identify up to 3 specific decision points):
+   - Highlight the most significant choices made
+   - Explain what made each choice meaningful
+   - Keep each moment brief (1 sentence)
+
+3. THEMES DEMONSTRATED:
+   - List which SEL competencies ${child.name} showed (from: ${moralMapping.sel_competencies.join(', ')})
+   - List which GROW themes were demonstrated (from: ${moralMapping.grow_themes.join(', ')})
+
+Return STRICT JSON only:
 {
-  "summary": "Your 3-4 sentence encouraging paragraph here"
+  "summary": "Your warm, encouraging 4-5 sentence paragraph here",
+  "growth_oriented_count": ${growthOrientedCount},
+  "total_choices": ${totalChoices},
+  "key_moments": ["First key moment", "Second key moment", "Third key moment (optional)"],
+  "sel_themes": ["competency1", "competency2"],
+  "grow_themes": ["theme1", "theme2"]
 }
 
-Keep it simple, positive, and focused on what ${child.name} did well. Make it feel special for a parent to read to their child.`;
+TONE GUIDANCE:
+- Focus on growth and learning, not perfection
+- If ${growthOrientedCount} < ${totalChoices}, acknowledge that all choices helped ${child.name} learn
+- Use age-appropriate vocabulary for ${child.age_group}
+- Make it feel special for a parent to read aloud to their child
+- Frame everything positively - this is about celebrating development`;
 }
 
 /**

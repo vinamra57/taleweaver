@@ -5,6 +5,7 @@
 
 import type { Env } from '../types/env';
 import type { StorySegment, StoryBranch } from '../schemas/story';
+import type { ChoiceQuality } from '../schemas/selThemes';
 import { generateTTS } from './elevenlabs';
 import { uploadAudio, getAudioUrl } from './r2';
 import { createLogger } from '../utils/logger';
@@ -67,8 +68,10 @@ export async function createSegmentWithAudio(
 export async function createBranchesInParallel(
   sessionId: string,
   choiceTextA: string,
+  choiceQualityA: ChoiceQuality,
   segmentTextA: string,
   choiceTextB: string,
+  choiceQualityB: ChoiceQuality,
   segmentTextB: string,
   nextCheckpointNumber: number,
   baseSegmentId: string,
@@ -97,6 +100,7 @@ export async function createBranchesInParallel(
         const branch: StoryBranch = {
           choice_text: choiceTextA,
           choice_value: 'A',
+          choice_quality: choiceQualityA,
           segment: segmentA,
         };
 
@@ -119,6 +123,7 @@ export async function createBranchesInParallel(
         const branch: StoryBranch = {
           choice_text: choiceTextB,
           choice_value: 'B',
+          choice_quality: choiceQualityB,
           segment: segmentB,
         };
 

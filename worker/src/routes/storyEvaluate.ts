@@ -37,6 +37,26 @@ export async function handleStoryEvaluation(c: Context): Promise<Response> {
     }
 
     // Build evaluation request from session data
+    // Use choice_records if available (new format), otherwise fallback to segments (old format)
+    const storyHistory = session.choice_records && session.choice_records.length > 0
+      ? session.choice_records.map(record => {
+          // Find the corresponding segment to get the full text
+          const segment = session.segments.find(s => s.checkpoint_number === record.checkpoint_number);
+          return {
+            segment_text: segment?.text || '',
+            chosen_option: record.chosen_text,
+            choice_quality: record.choice_quality,
+            checkpoint_index: record.checkpoint_number,
+          };
+        })
+      : session.segments
+          .filter(segment => segment.choice_text) // Fallback: only segments that came from choices
+          .map(segment => ({
+            segment_text: segment.text,
+            chosen_option: segment.choice_text,
+            checkpoint_index: segment.checkpoint_number,
+          }));
+
     const evaluationRequest = {
       child: {
         name: session.child.name,
@@ -45,13 +65,7 @@ export async function handleStoryEvaluation(c: Context): Promise<Response> {
         interests: session.child.interests.split(',').map(i => i.trim()),
       },
       moral_focus: session.moral_focus,
-      story_history: session.segments
-        .filter(segment => segment.choice_text) // Only segments that came from choices
-        .map(segment => ({
-          segment_text: segment.text,
-          chosen_option: segment.choice_text,
-          checkpoint_index: segment.checkpoint_number,
-        })),
+      story_history: storyHistory,
     };
 
     // Check if evaluation already exists

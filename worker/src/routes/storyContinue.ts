@@ -10,6 +10,7 @@ import {
   ContinueResponse,
   StoryBranch,
 } from '../schemas/story';
+import type { ChoiceRecord } from '../schemas/selThemes';
 import { getSession, saveSession } from '../services/kv';
 import { getSegmentIdForBranch } from '../services/branchOrchestrator';
 import { generateNextBranchesAsync } from '../services/asyncBranchGeneration';
@@ -59,9 +60,32 @@ export async function handleStoryContinue(c: Context): Promise<Response> {
 
     logger.info('Found pre-generated segment', { segmentId: chosenSegment.id });
 
+    // Get the choice quality from branches metadata
+    const chosenBranchInfo = session.branches_metadata?.[chosenSegmentId];
+    const choiceQuality = chosenBranchInfo?.choice_quality || 'growth_oriented'; // fallback for old sessions
+
     // Update session: add choice to path, increment checkpoint
     session.chosen_path.push(validatedRequest.chosen_branch);
     session.current_checkpoint = validatedRequest.checkpoint;
+
+    // Track choice record for evaluation
+    if (!session.choice_records) {
+      session.choice_records = [];
+    }
+
+    const choiceRecord: ChoiceRecord = {
+      checkpoint_number: validatedRequest.checkpoint,
+      chosen_value: validatedRequest.chosen_branch,
+      chosen_text: chosenSegment.choice_text || `Choice ${validatedRequest.chosen_branch}`,
+      choice_quality: choiceQuality,
+    };
+    session.choice_records.push(choiceRecord);
+
+    logger.info('Choice recorded', {
+      checkpoint: validatedRequest.checkpoint,
+      choice: validatedRequest.chosen_branch,
+      quality: choiceQuality,
+    });
 
     // Check if this is the final checkpoint
     const isFinal = isFinalCheckpoint(session.current_checkpoint, session.total_checkpoints);
@@ -109,16 +133,21 @@ export async function handleStoryContinue(c: Context): Promise<Response> {
       );
 
       if (segmentA && segmentB) {
-        // Reconstruct branches from pre-generated segments
+        // Reconstruct branches from pre-generated segments with choice quality
+        const branchAInfo = session.branches_metadata?.[segmentA.id];
+        const branchBInfo = session.branches_metadata?.[segmentB.id];
+
         nextBranches = [
           {
             choice_text: segmentA.choice_text || 'Choice A',
             choice_value: 'A',
+            choice_quality: branchAInfo?.choice_quality || 'growth_oriented',
             segment: segmentA
           },
           {
             choice_text: segmentB.choice_text || 'Choice B',
             choice_value: 'B',
+            choice_quality: branchBInfo?.choice_quality || 'less_ideal',
             segment: segmentB
           },
         ];
