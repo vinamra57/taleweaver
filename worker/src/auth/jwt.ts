@@ -34,8 +34,9 @@ async function getSecretKey(secret: string): Promise<CryptoKey> {
 /**
  * Base64 URL encode
  */
-function base64UrlEncode(data: ArrayBuffer): string {
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+function base64UrlEncode(data: ArrayBuffer | Uint8Array): string {
+  const uint8Array = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const base64 = btoa(String.fromCharCode(...uint8Array));
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
@@ -125,7 +126,7 @@ export async function verifyToken(
     const valid = await crypto.subtle.verify(
       'HMAC',
       key,
-      signature,
+      signature as any, // Uint8Array is valid but TypeScript types are incorrect
       encoder.encode(data)
     );
 
