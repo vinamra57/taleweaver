@@ -15,15 +15,30 @@ interface SavedStory {
   last_played_at: string;
 }
 
+interface SavedSong {
+  id: string;
+  session_id: string;
+  title: string;
+  child_name: string;
+  moral_focus: string;
+  song_type: 'song' | 'rhyme' | 'instrumental';
+  musical_style: 'lullaby' | 'pop' | 'folk' | 'classical' | 'jazz';
+  duration_seconds: number;
+  created_at: string;
+  last_played_at: string;
+}
+
 export const Dashboard: React.FC = () => {
   const { user, accessToken, logout } = useAuth();
   const [stories, setStories] = useState<SavedStory[]>([]);
+  const [songs, setSongs] = useState<SavedSong[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchStories();
+    fetchSongs();
   }, []);
 
   const fetchStories = async () => {
@@ -45,6 +60,21 @@ export const Dashboard: React.FC = () => {
       setError('Failed to load stories');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchSongs = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/songs`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSongs(data.songs || []);
+      }
+    } catch (error) {
+      // non-fatal
+      console.warn('Failed to fetch songs', error);
     }
   };
 
@@ -139,6 +169,63 @@ export const Dashboard: React.FC = () => {
                       className="btn-primary w-full"
                     >
                       Play Story
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-3xl text-bedtime-purple font-display font-medium mb-6">
+            Your Songs
+          </h2>
+          {songs.length === 0 ? (
+            <p className="text-bedtime-purple-dark">No saved songs yet. Compose one!</p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {songs.map((song) => (
+                <div key={song.id} className="bedtime-card">
+                  <h3 className="text-xl text-bedtime-purple font-display font-medium mb-2">
+                    {song.title}
+                  </h3>
+                  <p className="text-sm text-bedtime-purple-dark mb-4">
+                    {song.child_name} • {song.moral_focus} • {song.musical_style}
+                  </p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`${API_URL}/api/songs/${song.id}`, {
+                            headers: { 'Authorization': `Bearer ${accessToken}` },
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            const session = data.session;
+                            sessionStorage.setItem('taleweaver.songSession', JSON.stringify({
+                              session_id: song.session_id,
+                              child_name: song.child_name,
+                              audio_url: session.audio_url,
+                              title: song.title,
+                              lyrics: session.lyrics,
+                              duration_seconds: song.duration_seconds,
+                              song_type: song.song_type,
+                              theme: session.theme,
+                              moral_focus: song.moral_focus,
+                              musical_style: song.musical_style,
+                              voice_selection: session.voice_selection,
+                              created_at: song.created_at,
+                            }));
+                            navigate('/play-song');
+                          }
+                        } catch (e) {
+                          console.warn('Failed to open saved song');
+                        }
+                      }}
+                      className="btn-primary w-full"
+                    >
+                      Play Song
                     </button>
                   </div>
                 </div>

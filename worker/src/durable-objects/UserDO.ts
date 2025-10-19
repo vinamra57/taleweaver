@@ -10,6 +10,7 @@ import type {
   SavedStory,
   Session,
 } from '../schemas/auth/user';
+import type { SavedSong } from '../schemas/auth/user';
 
 export interface UserDOEnv {
   USER_DO: DurableObjectNamespace;
@@ -22,6 +23,8 @@ export interface UserDOEnv {
  * - profiles:user:{userId} -> string[] (profile IDs)
  * - story:{storyId} -> SavedStory
  * - stories:user:{userId} -> string[] (story IDs)
+ * - song:{songId} -> SavedSong
+ * - songs:user:{userId} -> string[] (song IDs)
  * - session:{sessionId} -> Session
  * - email_index:{email} -> userId (for lookup)
  */
@@ -197,6 +200,53 @@ export class UserDO extends DurableObject {
     const updatedIds = storyIds.filter((id) => id !== storyId);
     await this.ctx.storage.put(`stories:user:${userId}`, updatedIds);
 
+    return true;
+  }
+
+  // ============================================================================
+  // Saved Song Management
+  // ============================================================================
+
+  async saveSong(song: SavedSong): Promise<SavedSong> {
+    await this.ctx.storage.put(`song:${song.id}`, song);
+
+    const userSongIds =
+      (await this.ctx.storage.get<string[]>(`songs:user:${song.user_id}`)) || [];
+    userSongIds.unshift(song.id);
+    await this.ctx.storage.put(`songs:user:${song.user_id}`, userSongIds);
+
+    return song;
+  }
+
+  async getSong(songId: string): Promise<SavedSong | null> {
+    return (await this.ctx.storage.get<SavedSong>(`song:${songId}`)) || null;
+  }
+
+  async getUserSongs(userId: string, limit = 50): Promise<SavedSong[]> {
+    const songIds = (await this.ctx.storage.get<string[]>(`songs:user:${userId}`)) || [];
+    const songs: SavedSong[] = [];
+    for (const songId of songIds.slice(0, limit)) {
+      const song = await this.getSong(songId);
+      if (song) songs.push(song);
+    }
+    return songs;
+  }
+
+  async updateSong(songId: string, updates: Partial<SavedSong>): Promise<SavedSong | null> {
+    const song = await this.getSong(songId);
+    if (!song) return null;
+    const updated = { ...song, ...updates } as SavedSong;
+    await this.ctx.storage.put(`song:${songId}`, updated);
+    return updated;
+    }
+
+  async deleteSong(songId: string, userId: string): Promise<boolean> {
+    const song = await this.getSong(songId);
+    if (!song || song.user_id !== userId) return false;
+    await this.ctx.storage.delete(`song:${songId}`);
+    const songIds = (await this.ctx.storage.get<string[]>(`songs:user:${userId}`)) || [];
+    const updatedIds = songIds.filter((id) => id !== songId);
+    await this.ctx.storage.put(`songs:user:${userId}`, updatedIds);
     return true;
   }
 

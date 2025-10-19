@@ -8,6 +8,8 @@ import { Signup } from './pages/Signup';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Profiles } from './pages/Profiles';
+import { CreateSong } from './pages/CreateSong';
+import { PlaySong } from './pages/PlaySong';
 import './styles/globals.css';
 
 function App() {
@@ -33,6 +35,8 @@ function App() {
 
           <Route path="/create" element={<Create />} />
           <Route path="/play" element={<Play />} />
+          <Route path="/create-song" element={<CreateSong />} />
+          <Route path="/play-song" element={<PlaySong />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

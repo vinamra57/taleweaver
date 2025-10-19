@@ -9,6 +9,8 @@ import type {
   StartRequest,
   ContinueRequest,
   EvaluationResponse,
+  SongRequest,
+  SongResponse,
 } from './types';
 
 type BackendSegment = {
@@ -219,6 +221,33 @@ export const api = {
           (error.response?.data as any)?.message ||
           (error.response?.data as any)?.error ||
           'Failed to start story. Please try again.'
+        );
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new song
+   */
+  createSong: async (request: SongRequest): Promise<SongResponse> => {
+    try {
+      // Some songs can take >60s; allow longer timeout (configurable)
+      const songTimeoutMs = Number(
+        (import.meta as any).env?.VITE_SONG_CREATE_TIMEOUT_MS ?? 180000
+      );
+      const { data } = await apiClient.post('/api/song/create', request, {
+        timeout: songTimeoutMs,
+      });
+      return data as SongResponse;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          (error.response?.data as any)?.message ||
+          (error.response?.data as any)?.error ||
+          (error.code === 'ECONNABORTED'
+            ? 'Song generation is taking longer than expected. Please wait a bit and try again.'
+            : 'Failed to create song. Please try again.')
         );
       }
       throw error;

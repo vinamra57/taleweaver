@@ -34,7 +34,14 @@ import {
   handleSaveStory,
   handleDeleteStory,
 } from './routes/user/stories';
+import {
+  handleListSongs,
+  handleGetSong,
+  handleSaveSong,
+  handleDeleteSong,
+} from './routes/user/songs';
 import { handleStoryEvaluation } from './routes/storyEvaluate';
+import { handleSongCreate } from './routes/songCreate';
 
 // Auth middleware
 import { requireAuth, optionalAuth } from './auth/middleware';
@@ -71,6 +78,8 @@ app.get('/', (c) => {
       // Stories
       stories: 'GET/POST /api/stories',
       story: 'GET/DELETE /api/stories/:id',
+      songs: 'GET/POST /api/songs',
+      song: 'GET/DELETE /api/songs/:id',
       // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
@@ -78,6 +87,7 @@ app.get('/', (c) => {
       status: 'GET /api/story/status/:sessionId',
       branches: 'GET /api/story/branches/:sessionId/:checkpoint',
       audio: 'GET /audio/:sessionId/:sceneId',
+      songCreate: 'POST /api/song/create',
     },
   });
 });
@@ -99,6 +109,7 @@ app.post('/api/story/continue', optionalAuth, handleStoryContinue);
 app.post('/api/story/evaluate', optionalAuth, handleStoryEvaluation);
 app.get('/api/story/status/:sessionId', handleBranchStatus);
 app.get('/api/story/branches/:sessionId/:checkpoint', handleGetBranches);
+app.post('/api/song/create', optionalAuth, handleSongCreate);
 
 // ============================================================================
 // User Routes (Protected)
@@ -122,6 +133,10 @@ app.get('/api/stories', requireAuth, handleListStories);
 app.get('/api/stories/:id', requireAuth, handleGetStory);
 app.post('/api/stories/save', requireAuth, handleSaveStory);
 app.delete('/api/stories/:id', requireAuth, handleDeleteStory);
+app.get('/api/songs', requireAuth, handleListSongs);
+app.get('/api/songs/:id', requireAuth, handleGetSong);
+app.post('/api/songs/save', requireAuth, handleSaveSong);
+app.delete('/api/songs/:id', requireAuth, handleDeleteSong);
 
 // ============================================================================
 // Audio Serving

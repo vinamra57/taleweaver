@@ -52,6 +52,13 @@ export class ElevenLabsError extends ExternalAPIError {
   }
 }
 
+export class MusicError extends ExternalAPIError {
+  constructor(message: string) {
+    super('ElevenLabs Music', message);
+    this.name = 'MusicError';
+  }
+}
+
 export class WorkersAIError extends ExternalAPIError {
   constructor(message: string) {
     super('Workers AI', message);

@@ -19,6 +19,11 @@ export type MoralFocus =
 export type PresetVoice = 'princess' | 'scientist' | 'pirate' | 'coach' | 'explorer';
 export type VoiceSelection = 'custom' | PresetVoice;
 
+export type SongType = 'song' | 'rhyme' | 'instrumental';
+export type SongTheme = 'bedtime' | 'adventure' | 'learning' | 'celebration' | 'friendship';
+export type SongLength = 30 | 60 | 120;
+export type MusicalStyle = 'lullaby' | 'pop' | 'folk' | 'classical' | 'jazz';
+
 // ============================================================================
 // Child Profile
 // ============================================================================
@@ -98,6 +103,16 @@ export interface ContinueRequest {
   chosen: ChoiceId;
 }
 
+export interface SongRequest {
+  child_name: string;
+  song_type: SongType;
+  theme: SongTheme;
+  moral_focus: MoralFocus;
+  song_length: SongLength;
+  voice_selection?: VoiceSelection;
+  musical_style: MusicalStyle;
+}
+
 // ============================================================================
 // API Response Types
 // ============================================================================
@@ -156,6 +171,18 @@ export interface EvaluationResponse {
   evaluation: {
     summary: string; // One paragraph summary
   };
+}
+
+// ============================================================================
+// Song API Types
+// ============================================================================
+
+export interface SongResponse {
+  session_id: string;
+  audio_url: string;
+  lyrics?: string;
+  title: string;
+  duration_seconds: number;
 }
 
 // ============================================================================
@@ -267,4 +294,19 @@ export interface StoredStorySession {
   reached_final?: boolean;
   ending_reflection?: string;
   evaluation_summary?: string; // One paragraph evaluation
+}
+
+export interface StoredSongSession {
+  session_id: string;
+  child_name: string;
+  audio_url: string;
+  title: string;
+  lyrics?: string;
+  duration_seconds: number;
+  song_type: SongType;
+  theme: SongTheme;
+  moral_focus: MoralFocus;
+  musical_style: MusicalStyle;
+  voice_selection?: VoiceSelection;
+  created_at: string;
 }

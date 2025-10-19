@@ -60,6 +60,26 @@ export const SavedStorySchema = z.object({
 export type SavedStory = z.infer<typeof SavedStorySchema>;
 
 // ============================================================================
+// Saved Song Schema
+// ============================================================================
+
+export const SavedSongSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  session_id: z.string().uuid(), // Links to KV song session
+  title: z.string().min(1).max(200),
+  child_name: z.string(),
+  moral_focus: z.enum(['kindness', 'honesty', 'courage', 'sharing', 'perseverance']),
+  song_type: z.enum(['song', 'rhyme', 'instrumental']),
+  musical_style: z.enum(['lullaby', 'pop', 'folk', 'classical', 'jazz']),
+  duration_seconds: z.number().int(),
+  created_at: z.string().datetime(),
+  last_played_at: z.string().datetime().optional(),
+});
+
+export type SavedSong = z.infer<typeof SavedSongSchema>;
+
+// ============================================================================
 // Session Schema (for JWT sessions)
 // ============================================================================
 
@@ -146,3 +166,11 @@ export const SaveStoryRequestSchema = z.object({
 });
 
 export type SaveStoryRequest = z.infer<typeof SaveStoryRequestSchema>;
+
+// Save Song Request
+export const SaveSongRequestSchema = z.object({
+  session_id: z.string().uuid(),
+  title: z.string().min(1).max(200),
+});
+
+export type SaveSongRequest = z.infer<typeof SaveSongRequestSchema>;

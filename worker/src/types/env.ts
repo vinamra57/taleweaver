@@ -21,6 +21,11 @@ export interface UserDOStub {
   getUserStories(userId: string, limit?: number): Promise<any[]>;
   updateStory(storyId: string, updates: any): Promise<any>;
   deleteStory(storyId: string, userId: string): Promise<boolean>;
+  saveSong(song: any): Promise<any>;
+  getSong(songId: string): Promise<any>;
+  getUserSongs(userId: string, limit?: number): Promise<any[]>;
+  updateSong(songId: string, updates: any): Promise<any>;
+  deleteSong(songId: string, userId: string): Promise<boolean>;
   createSession(session: any): Promise<any>;
   getSession(sessionId: string): Promise<any>;
   deleteSession(sessionId: string): Promise<boolean>;

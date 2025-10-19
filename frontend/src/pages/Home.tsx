@@ -102,14 +102,23 @@ export const Home: React.FC = () => {
             Personalized tales that teach empathy, kindness, and important life lessons
           </p>
 
-          <button
-            onClick={() => navigate('/create')}
-            className="btn-primary text-xl inline-flex items-center gap-3"
-          >
-            <StarIllustration className="w-6 h-6" color="white" />
-            <span>Start Your Story</span>
-            <StarIllustration className="w-6 h-6" color="white" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => navigate('/create')}
+              className="btn-primary text-xl inline-flex items-center gap-3 justify-center"
+            >
+              <StarIllustration className="w-6 h-6" color="white" />
+              <span>Start Your Story</span>
+              <StarIllustration className="w-6 h-6" color="white" />
+            </button>
+            <button
+              onClick={() => navigate('/create-song')}
+              className="btn-secondary text-xl inline-flex items-center gap-3 justify-center"
+            >
+              <span role="img" aria-label="music">🎵</span>
+              <span>Compose a Song</span>
+            </button>
+          </div>
         </div>
 
         {/* Features Grid */}
@@ -143,10 +152,10 @@ export const Home: React.FC = () => {
               <RocketIllustration className="w-20 h-20" />
             </div>
             <h3 className="text-2xl text-bedtime-purple font-display font-medium mb-3">
-              Interactive
+              Interactive & Musical
             </h3>
             <p className="text-bedtime-purple-dark font-body leading-relaxed">
-              Your child makes choices that shape their own magical adventure
+              Your child makes choices in stories or enjoys a personalized lullaby built just for them
             </p>
           </div>
         </div>

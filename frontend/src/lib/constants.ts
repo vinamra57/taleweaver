@@ -1,8 +1,23 @@
-import { Child, Gender, AgeGroup, DurationMin, PresetVoice } from './types';
+import {
+  Child,
+  Gender,
+  AgeGroup,
+  DurationMin,
+  PresetVoice,
+  SongType,
+  SongTheme,
+  SongLength,
+  MusicalStyle,
+} from './types';
 import type { MoralFocus } from './types';
 
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Prefer explicit env; fall back to common Wrangler dev origin when running Vite locally.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.port === '5173'
+    ? 'http://localhost:8787'
+    : '');
 
 export interface CharacterPreset {
   child: Child;
@@ -59,6 +74,12 @@ export const AGE_GROUPS: AgeGroup[] = ['4-6', '7-9', '10-12'];
 // Duration Options
 export const DURATIONS: DurationMin[] = [1, 2, 3];
 
+// Song Options
+export const SONG_TYPES: SongType[] = ['song', 'rhyme', 'instrumental'];
+export const SONG_THEMES: SongTheme[] = ['bedtime', 'adventure', 'learning', 'celebration', 'friendship'];
+export const SONG_LENGTHS: SongLength[] = [30, 60, 120];
+export const MUSICAL_STYLES: MusicalStyle[] = ['lullaby', 'pop', 'folk', 'classical', 'jazz'];
+
 // Common Interests
 export const COMMON_INTERESTS = [
   'sports',
@@ -89,6 +110,7 @@ export const LOADING_MESSAGES = [
 
 // Session storage key
 export const STORY_SESSION_STORAGE_KEY = 'taleweaver.storySession';
+export const SONG_SESSION_STORAGE_KEY = 'taleweaver.songSession';
 
 // Voice Narrator Options
 export interface VoiceOption {
