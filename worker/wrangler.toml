@@ -33,7 +33,7 @@ script_name = "taleweaver-worker"
 # Durable Object migrations
 [[migrations]]
 tag = "v1"
-new_classes = ["UserDO"]
+new_sqlite_classes = ["UserDO"]
 
 # Secrets (set via: wrangler secret put <SECRET_NAME>)
 # GEMINI_API_KEY

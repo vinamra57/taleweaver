@@ -59,6 +59,7 @@ async function callGeminiWithRetry(
           generationConfig: {
             temperature: 0.8,
             maxOutputTokens: 4096,
+            responseMimeType: 'application/json',
           },
         }),
       });
@@ -102,21 +103,27 @@ async function callGeminiWithRetry(
  * Parse JSON from Gemini response, handling markdown code blocks
  */
 function extractJSON(text: string): unknown {
-  // Remove markdown code blocks if present
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  const jsonText = jsonMatch ? jsonMatch[1] : text;
-
   try {
-    return JSON.parse(jsonText.trim());
+    // With responseMimeType: 'application/json', response should be pure JSON
+    return JSON.parse(text.trim());
   } catch (error) {
-    // Log the problematic text for debugging
-    logger.error('JSON parse failed', {
-      rawText: text.substring(0, 200), // First 200 chars
-      extractedText: jsonText.substring(0, 200),
-      hadCodeBlock: !!jsonMatch,
-      error: String(error)
-    });
-    throw new GeminiError(`Failed to parse JSON from response: ${error}`);
+    // Fallback: try to extract from markdown code blocks
+    logger.warn('Direct JSON parse failed, trying markdown extraction');
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const jsonText = jsonMatch ? jsonMatch[1] : text;
+
+    try {
+      return JSON.parse(jsonText.trim());
+    } catch (fallbackError) {
+      // Log the problematic text for debugging
+      logger.error('JSON parse failed', {
+        rawText: text.substring(0, 500),
+        extractedText: jsonText.substring(0, 500),
+        hadCodeBlock: !!jsonMatch,
+        error: String(fallbackError)
+      });
+      throw new GeminiError(`Failed to parse JSON from response: ${fallbackError}`);
+    }
   }
 }
 

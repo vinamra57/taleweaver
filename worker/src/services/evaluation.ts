@@ -19,7 +19,7 @@ import type { MoralFocus } from '../schemas/story';
 const logger = createLogger('Evaluation Service');
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 // Evaluation request interface - enhanced with choice quality tracking
 export interface EvaluationRequest {
@@ -89,21 +89,38 @@ async function callGeminiForEvaluation(
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 2048,
+            responseMimeType: 'application/json',
           },
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        logger.error('Gemini API error response', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText.substring(0, 500),
+        });
         throw new GeminiError(`API returned ${response.status}: ${errorText}`);
       }
 
       const data = (await response.json()) as any;
 
+      // Log response structure for debugging
+      logger.debug('Gemini response structure', {
+        hasCandidates: !!data.candidates,
+        candidatesLength: data.candidates?.length,
+        firstCandidateHasContent: !!data.candidates?.[0]?.content,
+        finishReason: data.candidates?.[0]?.finishReason,
+      });
+
       // Extract text from Gemini response
       const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!generatedText) {
+        logger.error('No text in Gemini response', {
+          responseData: JSON.stringify(data).substring(0, 500),
+        });
         throw new GeminiError('No text generated in response');
       }
 
@@ -128,20 +145,26 @@ async function callGeminiForEvaluation(
  * Parse JSON from Gemini response
  */
 function extractEvaluationJSON(text: string): unknown {
-  // Remove markdown code blocks if present
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  const jsonText = jsonMatch ? jsonMatch[1] : text;
-
   try {
-    return JSON.parse(jsonText.trim());
+    // With responseMimeType: 'application/json', response should be pure JSON
+    return JSON.parse(text.trim());
   } catch (error) {
-    logger.error('Evaluation JSON parse failed', {
-      rawText: text.substring(0, 200),
-      extractedText: jsonText.substring(0, 200),
-      hadCodeBlock: !!jsonMatch,
-      error: String(error)
-    });
-    throw new GeminiError(`Failed to parse evaluation JSON: ${error}`);
+    // Fallback: try to extract from markdown code blocks
+    logger.warn('Direct JSON parse failed, trying markdown extraction');
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const jsonText = jsonMatch ? jsonMatch[1] : text;
+
+    try {
+      return JSON.parse(jsonText.trim());
+    } catch (fallbackError) {
+      logger.error('Evaluation JSON parse failed', {
+        rawText: text.substring(0, 500),
+        extractedText: jsonText.substring(0, 500),
+        hadCodeBlock: !!jsonMatch,
+        error: String(fallbackError)
+      });
+      throw new GeminiError(`Failed to parse evaluation JSON: ${fallbackError}`);
+    }
   }
 }
 

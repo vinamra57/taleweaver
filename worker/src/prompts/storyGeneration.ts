@@ -130,21 +130,23 @@ export function buildContinuationPrompt(
   const isFinal = currentCheckpoint === totalCheckpoints;
 
   const pathDescription = chosenPath
-    .map((choice, index) => `Choice ${index + 1}: ${choice}`)
-    .join(', ');
+    .map((choice, index) => `Checkpoint ${index + 1}: chose path ${choice}`)
+    .join('\n');
 
   if (isFinal) {
     // Final segment - no more choices
     return `You are continuing an interactive children's story. Write the FINAL SEGMENT.
 
-STORY CONTEXT:
+ORIGINAL STORY CONCEPT:
 ${storyPrompt}
 
-PREVIOUS SEGMENT:
+STORY SO FAR (what just happened):
 ${previousSegmentText}
 
-PATH TAKEN SO FAR:
+CHOICES MADE BY ${child.name}:
 ${pathDescription}
+
+CRITICAL: Continue directly from where the previous segment ended. The new segment must flow naturally from what ${child.name} just experienced. DO NOT introduce new characters, new plot threads, or unrelated scenarios. Build on the existing story.
 
 REQUIREMENTS FOR FINAL SEGMENT:
 - Main character: ${child.name} (${child.gender}, use ${pronouns.subject}/${pronouns.object}/${pronouns.possessive})
@@ -173,14 +175,21 @@ Note: Since this is the final segment, return null for choice fields. The final 
   // Continuation with more choices
   return `You are continuing an interactive children's story. Write the NEXT SEGMENT with new choices.
 
-STORY CONTEXT:
+ORIGINAL STORY CONCEPT:
 ${storyPrompt}
 
-PREVIOUS SEGMENT:
+STORY SO FAR (what just happened):
 ${previousSegmentText}
 
-PATH TAKEN SO FAR:
+CHOICES MADE BY ${child.name}:
 ${pathDescription}
+
+CRITICAL CONTEXT REQUIREMENTS:
+- Continue DIRECTLY from where the previous segment ended
+- The new choices MUST relate to the current situation ${child.name} is in
+- DO NOT introduce new unrelated characters (like "Barry") or plot threads
+- The story should flow naturally - if ${child.name} was helping a monkey, the next choices should be about that situation
+- Build on what's already happened in the story, don't start a completely new scenario
 
 REQUIREMENTS FOR SEGMENT ${currentCheckpoint + 1}:
 - Main character: ${child.name} (${child.gender}, use ${pronouns.subject}/${pronouns.object}/${pronouns.possessive})
@@ -197,19 +206,24 @@ AGE-APPROPRIATE LANGUAGE (Ages ${child.age_range}):
 - Maximum ${guidelines.max_syllables_per_word} syllables per word
 
 CRITICAL - CHOICE DESIGN FOR "${moralFocus}":
-Present TWO new meaningful choices (A and B) that build on previous decisions:
+Present TWO new meaningful choices (A and B) that:
+1. DIRECTLY relate to the situation ${child.name} is currently in (from the previous segment)
+2. Build naturally on what just happened in the story
+3. Give ${child.name} realistic options for what to do NEXT in this specific scenario
 
 Choice A should be GROWTH-ORIENTED:
-- Continues to demonstrate ${moralFocus}
+- Continues to demonstrate ${moralFocus} in the CURRENT situation
 - Uses keywords like: ${moralMapping.growth_keywords.slice(0, 5).join(', ')}
-- Builds on any positive choices already made
+- Shows what a thoughtful response would be to the current story moment
 - Mark this choice with "quality": "growth_oriented"
 
 Choice B should be LESS IDEAL (but not harmful):
-- Natural alternative that misses the learning opportunity
+- Natural alternative for the CURRENT situation that misses the learning opportunity
 - May use concepts like: ${moralMapping.less_ideal_keywords.slice(0, 3).join(', ')}
-- Shows contrast to help reinforce the lesson
+- Shows contrast to help reinforce the lesson IN THIS SPECIFIC CONTEXT
 - Mark this choice with "quality": "less_ideal"
+
+IMPORTANT: Both choices must make sense given what just happened. They should be about the same characters, location, and situation from the previous segment.
 
 For each choice, write the NEXT SEGMENT (${wordsPerSegment} words) that shows the outcome.
 
