@@ -273,17 +273,21 @@ export const Play: React.FC = () => {
       return;
     }
 
+    let audioUrl: string;
     if (isInteractiveMode) {
       if (!interactiveAudioUrl) {
         return;
       }
-      audioEl.src = interactiveAudioUrl;
+      audioUrl = interactiveAudioUrl;
     } else {
       if (!firstNonInteractiveAudioUrl) {
         return;
       }
-      audioEl.src = firstNonInteractiveAudioUrl;
+      audioUrl = firstNonInteractiveAudioUrl;
     }
+
+    audioEl.src = audioUrl;
+    setCurrentPlayingUrl(audioUrl);
 
     audioEl.play().catch((err) => {
       // Browser may block auto-play, log for debugging but don't show error to user
@@ -687,17 +691,21 @@ export const Play: React.FC = () => {
             <div className="flex items-center gap-4 p-4 bg-bedtime-purple-pale/30 rounded-xl">
               <div className="flex gap-2">
                 <button
-                  onClick={() => playAudio(currentInteractiveEntry.segment.audio_url)}
-                  disabled={isPlaying && currentPlayingUrl === currentInteractiveEntry.segment.audio_url}
-                  className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    console.log('Play clicked', { isPlaying, currentPlayingUrl, segmentUrl: currentInteractiveEntry.segment.audio_url });
+                    playAudio(currentInteractiveEntry.segment.audio_url);
+                  }}
+                  className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform"
                   aria-label="Play narration"
                 >
                   ▶
                 </button>
                 <button
-                  onClick={pauseAudio}
-                  disabled={!isPlaying || currentPlayingUrl !== currentInteractiveEntry.segment.audio_url}
-                  className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    console.log('Pause clicked', { isPlaying, currentPlayingUrl, segmentUrl: currentInteractiveEntry.segment.audio_url });
+                    pauseAudio();
+                  }}
+                  className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform"
                   aria-label="Pause narration"
                 >
                   ⏸
