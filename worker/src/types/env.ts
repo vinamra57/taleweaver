@@ -21,4 +21,5 @@ export interface Env {
   ELEVENLABS_MODEL_ID: string;
   SESSION_TTL_HOURS: string;
   R2_PUBLIC_URL?: string; // Optional: for public bucket URLs
+  DISABLE_TTS?: string; // Optional: set to 'true' to disable TTS calls during testing
 }

@@ -38,6 +38,7 @@ const VOICE_SETTINGS = {
 /**
  * Generate TTS audio with ElevenLabs
  * Returns audio as ArrayBuffer
+ * If DISABLE_TTS is set to 'true', returns a minimal silent audio buffer
  */
 export async function generateTTS(
   text: string,
@@ -45,6 +46,29 @@ export async function generateTTS(
   env: Env,
   maxRetries = 1
 ): Promise<ArrayBuffer> {
+  // Check if TTS is disabled for testing
+  if (env.DISABLE_TTS === 'true') {
+    logger.info('TTS disabled - returning mock audio buffer');
+    // Return a minimal WAV file (44 bytes header + silent audio)
+    // This is a valid 1-second silent WAV file at 8kHz mono
+    const silentWav = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, // "RIFF"
+      0x24, 0x00, 0x00, 0x00, // File size - 8
+      0x57, 0x41, 0x56, 0x45, // "WAVE"
+      0x66, 0x6d, 0x74, 0x20, // "fmt "
+      0x10, 0x00, 0x00, 0x00, // Subchunk1Size (16 for PCM)
+      0x01, 0x00,             // AudioFormat (1 for PCM)
+      0x01, 0x00,             // NumChannels (1 = mono)
+      0x40, 0x1f, 0x00, 0x00, // SampleRate (8000 Hz)
+      0x40, 0x1f, 0x00, 0x00, // ByteRate
+      0x01, 0x00,             // BlockAlign
+      0x08, 0x00,             // BitsPerSample (8 bits)
+      0x64, 0x61, 0x74, 0x61, // "data"
+      0x00, 0x00, 0x00, 0x00  // Subchunk2Size (0 bytes of audio)
+    ]);
+    return silentWav.buffer;
+  }
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       logger.debug(
