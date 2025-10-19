@@ -90,6 +90,7 @@ type BackendStartRequest = {
   moral_focus: 'kindness' | 'honesty' | 'courage' | 'sharing' | 'perseverance';
   story_length: 1 | 2 | 3;
   interactive: boolean;
+  voice_selection?: 'custom' | 'princess' | 'scientist' | 'pirate' | 'coach' | 'explorer' | string; // Allow cloned:{id} format
 };
 
 // Adapter: front form -> backend payload
@@ -133,6 +134,12 @@ function toBackendStartPayload(req: StartRequest): BackendStartRequest {
   // 6) interactive flag
   const interactive: boolean = (req as any).interactive ?? true;
 
+  // 7) voice selection with fallback to 'custom'
+  const voice_selection =
+    (req as any).voice_selection ??
+    (req as any).voiceSelection ??
+    'custom';
+
   return {
     child: {
       name: (req as any).child?.name ?? (req as any).name,
@@ -144,6 +151,7 @@ function toBackendStartPayload(req: StartRequest): BackendStartRequest {
     moral_focus,           // required
     story_length,          // 1 | 2 | 3
     interactive,           // boolean
+    voice_selection,       // 'custom' | 'princess' | 'pirate' | etc.
   };
 }
 
