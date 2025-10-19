@@ -8,11 +8,11 @@ import type { Env } from '../types/env';
 import {
   ContinueRequestSchema,
   ContinueResponse,
+  StoryBranch,
 } from '../schemas/story';
 import { getSession, saveSession } from '../services/kv';
-import { generateContinuation } from '../services/gemini';
-import { createBranchesInParallel, getSegmentIdForBranch } from '../services/branchOrchestrator';
-import { buildContinuationPrompt } from '../prompts/storyGeneration';
+import { getSegmentIdForBranch } from '../services/branchOrchestrator';
+import { generateNextBranchesAsync } from '../services/asyncBranchGeneration';
 import { isFinalCheckpoint } from '../services/storyStructure';
 import { ValidationError, SessionNotFoundError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
@@ -84,25 +84,11 @@ export async function handleStoryContinue(c: Context): Promise<Response> {
       return c.json(response, 200);
     }
 
-    // NOT FINAL: Generate next two branches for the upcoming choice
-    logger.info('Generating next branches', {
+    // NOT FINAL: Check if next branches are already generated
+    logger.info('Checking for pre-generated branches', {
       nextCheckpoint: session.current_checkpoint + 1,
+      branchesReady: session.next_branches_ready,
     });
-
-    // Build prompt for continuation
-    const continuationPrompt = buildContinuationPrompt(
-      session.story_prompt,
-      session.child,
-      session.moral_focus,
-      session.words_per_segment,
-      session.chosen_path,
-      session.current_checkpoint,
-      session.total_checkpoints,
-      chosenSegment.text
-    );
-
-    // Generate next branches with Gemini
-    const continuationResponse = await generateContinuation(continuationPrompt, env);
 
     // Get worker URL from request
     const workerUrl = new URL(c.req.url).origin;
@@ -110,33 +96,70 @@ export async function handleStoryContinue(c: Context): Promise<Response> {
     // Determine next checkpoint number
     const nextCheckpointNumber = session.current_checkpoint + 1;
 
-    // Generate both branches in parallel
-    const branches = await createBranchesInParallel(
-      session.session_id,
-      continuationResponse.choice_a?.text || 'Choice A',
-      continuationResponse.choice_a?.next_segment || '',
-      continuationResponse.choice_b?.text || 'Choice B',
-      continuationResponse.choice_b?.next_segment || '',
-      nextCheckpointNumber,
-      `segment_${nextCheckpointNumber + 1}`,
-      env,
-      workerUrl
-    );
+    // Find pre-generated branches for the next checkpoint
+    let nextBranches: StoryBranch[] | undefined = undefined;
 
-    // Add new segments to session
-    session.segments.push(branches[0].segment, branches[1].segment);
+    if (session.next_branches_ready) {
+      // Branches should already be generated - find them
+      const segmentA = session.segments.find(
+        (s) => s.id === getSegmentIdForBranch(nextCheckpointNumber, 'A')
+      );
+      const segmentB = session.segments.find(
+        (s) => s.id === getSegmentIdForBranch(nextCheckpointNumber, 'B')
+      );
+
+      if (segmentA && segmentB) {
+        // Reconstruct branches from pre-generated segments
+        nextBranches = [
+          {
+            choice_text: segmentA.choice_text || 'Choice A',
+            choice_value: 'A',
+            segment: segmentA
+          },
+          {
+            choice_text: segmentB.choice_text || 'Choice B',
+            choice_value: 'B',
+            segment: segmentB
+          },
+        ];
+        logger.info('Found pre-generated branches', { nextCheckpoint: nextCheckpointNumber });
+      } else {
+        logger.warn('Branches marked ready but not found in segments', {
+          nextCheckpoint: nextCheckpointNumber,
+        });
+      }
+    } else {
+      logger.warn('Branches not ready yet - user may have to wait', {
+        generationInProgress: session.generation_in_progress,
+      });
+    }
+
+    // Mark that we need new branches for the checkpoint after next
+    session.next_branches_ready = false;
 
     // Save updated session
     await saveSession(session, env);
 
+    // Trigger async generation of the NEXT set of branches
+    // (for checkpoint after the one we're about to enter)
+    c.executionCtx.waitUntil(
+      generateNextBranchesAsync(
+        session.session_id,
+        session.current_checkpoint,
+        chosenSegment.text,
+        env,
+        workerUrl
+      )
+    );
+
     // Build response
     const response: ContinueResponse = {
       segment: chosenSegment,
-      next_branches: branches,
+      next_branches: nextBranches,
       story_complete: false,
     };
 
-    logger.info('Story continued successfully', {
+    logger.info('Story continued successfully (async generation triggered)', {
       sessionId: session.session_id,
       currentCheckpoint: session.current_checkpoint,
     });

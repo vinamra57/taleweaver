@@ -17,7 +17,8 @@ import {
 } from '../services/gemini';
 import { saveSession } from '../services/kv';
 import { calculateStoryStructure, generateSegmentId } from '../services/storyStructure';
-import { createSegmentWithAudio, createBranchesInParallel } from '../services/branchOrchestrator';
+import { createSegmentWithAudio } from '../services/branchOrchestrator';
+import { generateFirstBranchesAsync } from '../services/asyncBranchGeneration';
 import { buildPromptGenerationPrompt } from '../prompts/promptGeneration';
 import {
   buildNonInteractiveStoryPrompt,
@@ -117,6 +118,8 @@ export async function handleStoryStart(c: Context): Promise<Response> {
         words_per_segment: structure.words_per_segment,
         chosen_path: [],
         segments: [segment],
+        next_branches_ready: false,
+        generation_in_progress: false,
         created_at: new Date().toISOString(),
       };
 
@@ -134,10 +137,10 @@ export async function handleStoryStart(c: Context): Promise<Response> {
     }
 
     // ========================================================================
-    // INTERACTIVE MODE: Generate first segment + 2 branches
+    // INTERACTIVE MODE: Generate first segment, then branches async
     // ========================================================================
 
-    logger.info('Generating interactive story with branches');
+    logger.info('Generating interactive story with async branch generation');
 
     const firstSegmentPrompt = buildFirstSegmentPrompt(
       detailedStoryPrompt,
@@ -158,20 +161,7 @@ export async function handleStoryStart(c: Context): Promise<Response> {
       workerUrl
     );
 
-    // Create both branches in parallel (for checkpoint 1 → 2)
-    const branches = await createBranchesInParallel(
-      sessionId,
-      firstSegmentResponse.choice_a.text,
-      firstSegmentResponse.choice_a.next_segment,
-      firstSegmentResponse.choice_b.text,
-      firstSegmentResponse.choice_b.next_segment,
-      1, // next checkpoint number
-      'segment_2', // base ID for next segments
-      env,
-      workerUrl
-    );
-
-    // Create and save session
+    // Create and save initial session (without branches yet)
     const session: Session = {
       session_id: sessionId,
       child: validatedRequest.child,
@@ -183,21 +173,29 @@ export async function handleStoryStart(c: Context): Promise<Response> {
       current_checkpoint: 0,
       words_per_segment: structure.words_per_segment,
       chosen_path: [],
-      segments: [firstSegment, branches[0].segment, branches[1].segment],
+      segments: [firstSegment],
+      next_branches_ready: false,
+      generation_in_progress: false,
       created_at: new Date().toISOString(),
     };
 
     await saveSession(session, env);
 
-    // Build response
+    // Trigger async branch generation in the background
+    // This will run after the response is sent
+    c.executionCtx.waitUntil(
+      generateFirstBranchesAsync(sessionId, env, workerUrl)
+    );
+
+    // Build response (without branches - they'll be generated in background)
     const response: StartResponse = {
       session_id: sessionId,
       segment: firstSegment,
-      next_branches: branches,
+      next_branches: undefined, // Branches will be ready by the time audio finishes
       story_complete: false,
     };
 
-    logger.info('Interactive story started successfully', { sessionId });
+    logger.info('Interactive story started successfully (async generation triggered)', { sessionId });
     return c.json(response, 200);
   } catch (error) {
     logger.error('Story start failed', error);

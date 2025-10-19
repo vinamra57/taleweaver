@@ -8,6 +8,8 @@ import { cors } from 'hono/cors';
 import type { Env } from './types/env';
 import { handleStoryStart } from './routes/storyStart';
 import { handleStoryContinue } from './routes/storyContinue';
+import { handleBranchStatus } from './routes/branchStatus';
+import { handleGetBranches } from './routes/getBranches';
 import { getAudio } from './services/r2';
 import { TaleWeaverError } from './utils/errors';
 import { createLogger } from './utils/logger';
@@ -75,6 +77,8 @@ app.get('/', (c) => {
       // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
+      status: 'GET /api/story/status/:sessionId',
+      branches: 'GET /api/story/branches/:sessionId/:checkpoint',
       audio: 'GET /audio/:sessionId/:sceneId',
     },
   });
@@ -86,6 +90,16 @@ app.get('/', (c) => {
 app.post('/api/auth/signup', handleSignup);
 app.post('/api/auth/login', handleLogin);
 app.post('/api/auth/change-password', requireAuth, handleChangePassword);
+
+// ============================================================================
+// Story Generation Routes (Optional Auth)
+// ============================================================================
+// These routes work with or without authentication
+// If authenticated, stories can be saved to user account
+app.post('/api/story/start', optionalAuth, handleStoryStart);
+app.post('/api/story/continue', optionalAuth, handleStoryContinue);
+app.get('/api/story/status/:sessionId', handleBranchStatus);
+app.get('/api/story/branches/:sessionId/:checkpoint', handleGetBranches);
 
 // ============================================================================
 // User Routes (Protected)
@@ -115,14 +129,6 @@ app.delete('/api/stories/:id', requireAuth, handleDeleteStory);
 // Shared Story Route (Public)
 // ============================================================================
 app.get('/api/stories/shared/:shareId', handleGetSharedStory);
-
-// ============================================================================
-// Story Generation Routes (Optional Auth)
-// ============================================================================
-// These routes work with or without authentication
-// If authenticated, stories can be saved to user account
-app.post('/api/story/start', optionalAuth, handleStoryStart);
-app.post('/api/story/continue', optionalAuth, handleStoryContinue);
 
 // ============================================================================
 // Audio Serving

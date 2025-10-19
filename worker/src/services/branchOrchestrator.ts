@@ -21,7 +21,8 @@ export async function createSegmentWithAudio(
   segmentText: string,
   checkpointNumber: number,
   env: Env,
-  workerUrl: string
+  workerUrl: string,
+  choiceText?: string
 ): Promise<StorySegment> {
   try {
     logger.info(`Creating segment with audio: ${segmentId}`);
@@ -44,6 +45,7 @@ export async function createSegmentWithAudio(
       text: segmentText,
       audio_url: audioUrl,
       checkpoint_number: checkpointNumber,
+      choice_text: choiceText,
     };
 
     logger.info(`Segment created successfully: ${segmentId}`);
@@ -82,7 +84,8 @@ export async function createBranchesInParallel(
           segmentTextA,
           nextCheckpointNumber,
           env,
-          workerUrl
+          workerUrl,
+          choiceTextA
         );
 
         const branch: StoryBranch = {
@@ -102,7 +105,8 @@ export async function createBranchesInParallel(
           segmentTextB,
           nextCheckpointNumber,
           env,
-          workerUrl
+          workerUrl,
+          choiceTextB
         );
 
         const branch: StoryBranch = {

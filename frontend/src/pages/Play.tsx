@@ -100,6 +100,72 @@ export const Play: React.FC = () => {
     audioEl.play().catch(() => null);
   }, [isInteractiveMode, interactiveAudioUrl, firstNonInteractiveAudioUrl]);
 
+  // Poll for branch readiness when next_options is empty
+  useEffect(() => {
+    if (!sessionState?.settings.interactive || !sessionState.interactive_state) {
+      return;
+    }
+
+    const { next_options } = sessionState.interactive_state;
+    const hasReachedFinal = sessionState.reached_final;
+
+    // Only poll if we don't have options yet and haven't reached the end
+    if (next_options.length > 0 || hasReachedFinal) {
+      return;
+    }
+
+    console.log('[Polling] Starting to poll for branches...');
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const currentCheckpoint = sessionState.interactive_state?.current_segment.checkpoint_index ?? 0;
+        const nextCheckpoint = currentCheckpoint + 1;
+
+        console.log(`[Polling] Checking branches for checkpoint ${nextCheckpoint}...`);
+        const branchesData = await api.getBranches(sessionState.session_id, nextCheckpoint);
+        console.log('[Polling] Branches data:', branchesData);
+
+        if (branchesData.branches_ready && branchesData.branches.length > 0) {
+          // Branches are ready! Update the session state with them
+          console.log('[Polling] ✅ Branches fetched and ready!', branchesData.branches);
+
+          const nextOptions = branchesData.branches.slice(0, 2).map((br, i) => ({
+            id: (br.id ?? (['A', 'B'] as const)[i]) as ChoiceId,
+            label: br.label ?? ((['A', 'B'] as const)[i] === 'A' ? 'Choice A' : 'Choice B'),
+            segment: {
+              from_checkpoint: currentCheckpoint,
+              to_checkpoint: nextCheckpoint,
+              text: br.segment.text,
+              emotion_hint: br.segment.emotion_hint ?? 'warm', // Default to 'warm' if not provided
+              audio_url: br.segment.audio_url,
+            },
+          }));
+
+          setSessionState((prev) => {
+            if (!prev?.interactive_state) return prev;
+
+            return {
+              ...prev,
+              interactive_state: {
+                ...prev.interactive_state,
+                next_options: nextOptions,
+              },
+            };
+          });
+
+          clearInterval(pollInterval);
+        }
+      } catch (err) {
+        console.error('[Polling] Failed to fetch branches:', err);
+      }
+    }, 1000); // Poll every second
+
+    // Cleanup
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [sessionState]);
+
   const playAudio = (audioUrl: string) => {
     const audioEl = audioRef.current;
     if (!audioEl) {
@@ -308,31 +374,40 @@ export const Play: React.FC = () => {
               </h4>
 
               <div className="space-y-3">
-                {interactiveState.next_options.map((option: ChoiceOption) => (
-                  <button
-                    key={option.id}
-                    onClick={() => handleChoiceSelect(option.id)}
-                    disabled={isLoading}
-                    className="btn-choice disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl flex-shrink-0">
-                        {option.id === 'A' ? '🅰️' : '🅱️'}
-                      </span>
-                      <div className="text-left flex-1">
-                        <p className="font-medium text-bedtime-purple-dark mb-1">
-                          {option.label}
-                        </p>
-                        <p className="text-sm text-bedtime-purple/60">
-                          Emotion hint: {formatEmotion(option.segment.emotion_hint)}
-                        </p>
+                {interactiveState.next_options.length > 0 ? (
+                  interactiveState.next_options.map((option: ChoiceOption) => (
+                    <button
+                      key={option.id}
+                      onClick={() => handleChoiceSelect(option.id)}
+                      disabled={isLoading}
+                      className="btn-choice disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl flex-shrink-0">
+                          {option.id === 'A' ? '🅰️' : '🅱️'}
+                        </span>
+                        <div className="text-left flex-1">
+                          <p className="font-medium text-bedtime-purple-dark mb-1">
+                            {option.label}
+                          </p>
+                          <p className="text-sm text-bedtime-purple/60">
+                            Emotion hint: {formatEmotion(option.segment.emotion_hint)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-bedtime-purple border-t-transparent mb-3"></div>
+                    <p className="text-bedtime-purple/70 text-sm">
+                      Weaving your choices... ✨
+                    </p>
+                  </div>
+                )}
                 {isLoading && (
                   <p className="text-center text-bedtime-purple/70 text-sm">
-                    Weaving the next chapter...
+                    Continuing the story...
                   </p>
                 )}
               </div>
