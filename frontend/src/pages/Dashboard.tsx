@@ -60,18 +60,26 @@ export const Dashboard: React.FC = () => {
     <div className="container-bedtime min-h-screen">
       <div className="pt-8 pb-8">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl text-bedtime-purple font-display font-semibold">
-              Welcome back, {user?.name}!
-            </h1>
-            <p className="text-bedtime-purple-dark mt-2">
-              {user?.email}
-            </p>
-          </div>
-          <button onClick={logout} className="btn-secondary">
-            Sign Out
-          </button>
-        </div>
+           <div>
+             <h1 className="text-4xl text-bedtime-purple font-display font-semibold">
+               Welcome back, {user?.name}!
+             </h1>
+             <p className="text-bedtime-purple-dark mt-2">
+               {user?.email}
+             </p>
+           </div>
+           <div className="flex gap-4">
+             <button
+               onClick={() => navigate('/')}
+               className="btn-secondary"
+             >
+               Home
+             </button>
+             <button onClick={logout} className="btn-secondary">
+               Sign Out
+             </button>
+           </div>
+         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <button
