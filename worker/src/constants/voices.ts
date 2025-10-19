@@ -14,31 +14,31 @@ export interface VoiceMetadata {
 
 export const PRESET_VOICES: Record<PresetVoice, VoiceMetadata> = {
   princess: {
-    id: 'YIwySL1WifAPjXRMYxkh',
+    id: 'cgSgspJ2msm6clMCkdW9', // Jessica - young, female, cute
     name: 'Princess',
     description: 'A high-pitched, clear female voice in her 20s with a melodious, gentle, and elegant tone. Speaking at a smooth, unhurried pace, the voice carries a feeling of grace, kindness, and refinement.',
     vocal_tags: ['vocal_female','soprano','airy','gentle','bright','soft_vibrato','lullaby','clear_articulation'],
   },
   scientist: {
-    id: 'udNT7cHxdthx3LETLQLy',
+    id: 'onwK4e9ZLuTAKqWW03F9', // Daniel - middle_aged, male, formal
     name: 'Scientist',
     description: 'A medium-low male voice in his 40s with a precise, hyper-articulate tone. The delivery is intellectual and slightly quirky, often speaking at a quick, excited pace and featuring a subtle technical or robotic filter.',
     vocal_tags: ['vocal_male','tenor','clear_articulation','precise','neutral','pop_ballad','bright','steady'],
   },
   pirate: {
-    id: 'f4amWE270zjzmi2YweAA',
+    id: 'SOYHLrjzK2X1ezoPC6cr', // Harry - young, male, rough
     name: 'Pirate',
     description: 'A deep, throaty male voice in his 50s with a gravelly and boisterous texture. The tone is rough yet good-natured, delivered at a lively pace with a pronounced, rolling accent that suggests a life of adventure at sea.',
     vocal_tags: ['vocal_male','baritone','gravelly','boisterous','bold','sea_chanty','adventurous','projected'],
   },
   coach: {
-    id: 'dXB5RMMppnpAvpr9WJBu',
+    id: 'XrExE9yKIg1WjnnlVkGX', // Matilda - middle_aged, female, upbeat
     name: 'Coach',
     description: 'A medium-pitch, strong female voice in her late 30s that is energetic and slightly loud. The tone is encouraging and direct, using a fast, motivational pace as if shouting instructions from the sidelines.',
     vocal_tags: ['vocal_female','mezzo_soprano','energetic','projected','staccato','bright','motivational'],
   },
   explorer: {
-    id: '7X5dNuxmpGUsCE49iZzJ',
+    id: 'pFZP5JQG7iQjIQuC4Bku', // Lily - middle_aged, female, confident
     name: 'Explorer',
     description: 'A smooth, confident female voice in her 30s with a crisp, clear American accent. The tone is adventurous and curious, delivered at a steady, inquisitive pace that suggests a hero observing a new discovery.',
     vocal_tags: ['vocal_female','alto','confident','warm','clear','adventurous','steady'],
