@@ -109,29 +109,36 @@ export async function handleGetStory(c: Context<{ Bindings: Env }>): Promise<Res
  */
 export async function handleSaveStory(c: Context<{ Bindings: Env }>): Promise<Response> {
   try {
+    // Step 1: Get auth user
     const authUser = requireAuthUser(c);
+    logger.info('Auth user retrieved', { userId: authUser.id });
+
+    // Step 2: Parse request body
     const body = await c.req.json();
     const validatedRequest = SaveStoryRequestSchema.parse(body);
+    logger.info('Request validated', { sessionId: validatedRequest.session_id, title: validatedRequest.title });
 
-    logger.info('Save story', { userId: authUser.id, sessionId: validatedRequest.session_id });
-
-    // Get session from KV to validate it exists
+    // Step 3: Get session from KV
     const session = await getSession(validatedRequest.session_id, c.env);
 
     if (!session) {
+      logger.warn('Session not found in KV', { sessionId: validatedRequest.session_id });
       return c.json(
         {
           error: 'Session Not Found',
-          message: 'Story session not found or expired',
+          message: 'Story session not found or expired. Sessions expire after 12 hours.',
         },
         404
       );
     }
+    logger.info('Session found', { childName: session.child.name });
 
-    // Get Durable Object instance
+    // Step 4: Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id) as any;
+    const userDO = c.env.USER_DO.get(id);
+    logger.info('Durable Object retrieved');
 
+    // Step 5: Create saved story object
     const now = new Date().toISOString();
     const savedStory: SavedStory = {
       id: generateUUID(),
@@ -144,16 +151,20 @@ export async function handleSaveStory(c: Context<{ Bindings: Env }>): Promise<Re
       created_at: now,
       last_played_at: now,
     };
+    logger.info('Story object created', { storyId: savedStory.id });
 
-    await userDO.saveStory(savedStory);
-
-    logger.info('Story saved', { storyId: savedStory.id });
+    // Step 6: Save to Durable Object
+    await (userDO as any).saveStory(savedStory);
+    logger.info('Story saved to DO successfully', { storyId: savedStory.id });
 
     return c.json({
       story: savedStory,
     }, 201);
   } catch (error) {
-    logger.error('Save story failed', error);
+    logger.error('Save story failed', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
 
     if (error instanceof ValidationError) {
       return c.json(

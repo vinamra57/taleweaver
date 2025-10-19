@@ -27,7 +27,10 @@ export const MoralFocusSchema = z.enum([
 
 export const BranchChoiceSchema = z.enum(['A', 'B']);
 
-export const VoiceSelectionSchema = z.enum(['custom', 'princess', 'scientist', 'pirate', 'coach', 'explorer']);
+export const VoiceSelectionSchema = z.union([
+  z.enum(['custom', 'princess', 'scientist', 'pirate', 'coach', 'explorer']),
+  z.string().regex(/^cloned:[a-zA-Z0-9]+$/, 'Invalid cloned voice format'), // Allows "cloned:{voiceId}"
+]);
 
 // ============================================================================
 // Child Info

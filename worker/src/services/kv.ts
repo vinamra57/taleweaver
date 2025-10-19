@@ -16,14 +16,15 @@ const logger = createLogger('KV Service');
 export async function getSession(
   sessionId: string,
   env: Env
-): Promise<Session> {
+): Promise<Session | null> {
   try {
     logger.debug(`Fetching session: ${sessionId}`);
 
     const sessionData = await env.TALEWEAVER_SESSIONS.get(sessionId, 'json');
 
     if (!sessionData) {
-      throw new SessionNotFoundError(sessionId);
+      logger.warn(`Session not found: ${sessionId}`);
+      return null;
     }
 
     // Validate session data structure
@@ -32,11 +33,8 @@ export async function getSession(
     logger.info(`Session retrieved successfully: ${sessionId}`);
     return session;
   } catch (error) {
-    if (error instanceof SessionNotFoundError) {
-      throw error;
-    }
     logger.error(`Failed to get session: ${sessionId}`, error);
-    throw new StorageError(`Failed to retrieve session: ${error}`, 'KV');
+    return null;
   }
 }
 
