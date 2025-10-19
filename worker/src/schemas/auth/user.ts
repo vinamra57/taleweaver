@@ -53,8 +53,6 @@ export const SavedStorySchema = z.object({
   child_name: z.string(),
   moral_focus: z.enum(['kindness', 'honesty', 'courage', 'sharing', 'perseverance']),
   interactive: z.boolean(),
-  is_shared: z.boolean(),
-  share_id: z.string().optional(), // Short ID for sharing
   created_at: z.string().datetime(),
   last_played_at: z.string().datetime().optional(),
 });

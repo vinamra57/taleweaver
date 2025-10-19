@@ -22,7 +22,6 @@ export interface UserDOEnv {
  * - profiles:user:{userId} -> string[] (profile IDs)
  * - story:{storyId} -> SavedStory
  * - stories:user:{userId} -> string[] (story IDs)
- * - stories:share:{shareId} -> storyId
  * - session:{sessionId} -> Session
  * - email_index:{email} -> userId (for lookup)
  */
@@ -153,22 +152,11 @@ export class UserDO extends DurableObject {
     userStoryIds.unshift(story.id); // Add to beginning (most recent first)
     await this.ctx.storage.put(`stories:user:${story.user_id}`, userStoryIds);
 
-    // If shared, add to share index
-    if (story.is_shared && story.share_id) {
-      await this.ctx.storage.put(`stories:share:${story.share_id}`, story.id);
-    }
-
     return story;
   }
 
   async getStory(storyId: string): Promise<SavedStory | null> {
     return (await this.ctx.storage.get<SavedStory>(`story:${storyId}`)) || null;
-  }
-
-  async getStoryByShareId(shareId: string): Promise<SavedStory | null> {
-    const storyId = await this.ctx.storage.get<string>(`stories:share:${shareId}`);
-    if (!storyId) return null;
-    return this.getStory(storyId);
   }
 
   async getUserStories(userId: string, limit = 50): Promise<SavedStory[]> {
@@ -194,13 +182,6 @@ export class UserDO extends DurableObject {
 
     await this.ctx.storage.put(`story:${storyId}`, updatedStory);
 
-    // Update share index if needed
-    if (updatedStory.is_shared && updatedStory.share_id) {
-      await this.ctx.storage.put(`stories:share:${updatedStory.share_id}`, storyId);
-    } else if (!updatedStory.is_shared && story.share_id) {
-      await this.ctx.storage.delete(`stories:share:${story.share_id}`);
-    }
-
     return updatedStory;
   }
 
@@ -210,11 +191,6 @@ export class UserDO extends DurableObject {
 
     // Remove from storage
     await this.ctx.storage.delete(`story:${storyId}`);
-
-    // Remove from share index
-    if (story.share_id) {
-      await this.ctx.storage.delete(`stories:share:${story.share_id}`);
-    }
 
     // Remove from user's story list
     const storyIds = (await this.ctx.storage.get<string[]>(`stories:user:${userId}`)) || [];
