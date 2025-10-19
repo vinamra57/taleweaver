@@ -228,11 +228,16 @@ export interface NonInteractiveStoryState {
   segments: CheckpointSegment[];
 }
 
+export interface HistoryEntry {
+  segment: CheckpointSegment;
+  chosenOption?: string; // The text of the choice that led to this segment
+}
+
 export interface InteractiveStoryState {
   current_segment: CheckpointSegment;
   next_options: ChoiceOption[];
   remaining_checkpoints: number;
-  history: CheckpointSegment[];
+  history: HistoryEntry[];
 }
 
 export interface StoredStorySession {
