@@ -52,7 +52,7 @@ async function callGeminiWithRetry(
           ],
           generationConfig: {
             temperature: 0.8,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
           },
         }),
       });
@@ -103,6 +103,13 @@ function extractJSON(text: string): unknown {
   try {
     return JSON.parse(jsonText.trim());
   } catch (error) {
+    // Log the problematic text for debugging
+    logger.error('JSON parse failed', {
+      rawText: text.substring(0, 200), // First 200 chars
+      extractedText: jsonText.substring(0, 200),
+      hadCodeBlock: !!jsonMatch,
+      error: String(error)
+    });
     throw new GeminiError(`Failed to parse JSON from response: ${error}`);
   }
 }

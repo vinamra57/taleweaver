@@ -28,7 +28,7 @@ type BackendBranch = {
 type BackendStartInteractiveResponse = {
   session_id: string;
   segment: BackendSegment;            // first segment (checkpoint 0)
-  next_branches: BackendBranch[];     // two choices
+  next_branches?: BackendBranch[];    // two choices (optional during async generation)
   story_complete: false;
 };
 
@@ -40,7 +40,7 @@ type BackendStartNonInteractiveResponse = {
 
 type BackendContinueMidResponse = {
   segment: BackendSegment;            // the segment that just played
-  next_branches: BackendBranch[];     // next two choices
+  next_branches?: BackendBranch[];    // next two choices (optional during async generation)
   story_complete: false;
 };
 
@@ -186,8 +186,11 @@ export const api = {
       // Backend interactive: { session_id, segment, next_branches, story_complete: false }
       const interactive = data as BackendStartInteractiveResponse;
       const current = seg0(interactive.segment);
-      const next_options = asChoiceOptionsFromBranches(interactive.next_branches, 0, 1);
-      
+      // next_branches may be undefined during async generation
+      const next_options = interactive.next_branches
+        ? asChoiceOptionsFromBranches(interactive.next_branches, 0, 1)
+        : [];
+
       return {
         session_id: interactive.session_id,
         settings: {
@@ -198,7 +201,7 @@ export const api = {
         current_segment: current,
         next_options,
         // purely cosmetic estimate for the UI badge
-        remaining_checkpoints: backendPayload.story_length, 
+        remaining_checkpoints: backendPayload.story_length,
       } as any; // matches StartResponseInteractive
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -241,7 +244,10 @@ export const api = {
               audio_url: mid.segment.audio_url,
             },
           },
-          next_options: asChoiceOptionsFromBranches(mid.next_branches, to, to + 1),
+          // next_branches may be undefined during async generation
+          next_options: mid.next_branches
+            ? asChoiceOptionsFromBranches(mid.next_branches, to, to + 1)
+            : [],
           reached_final: false,
         };
       }
@@ -275,6 +281,46 @@ export const api = {
         );
       }
       throw error;
+    }
+  },
+
+  /**
+   * Check if next branches are ready for a session
+   */
+  checkBranchStatus: async (sessionId: string): Promise<{
+    branches_ready: boolean;
+    generation_in_progress: boolean;
+    current_checkpoint: number;
+  }> => {
+    try {
+      const { data } = await apiClient.get(`/api/story/status/${sessionId}`);
+      return data;
+    } catch (error) {
+      console.error('Failed to check branch status:', error);
+      return {
+        branches_ready: false,
+        generation_in_progress: false,
+        current_checkpoint: 0,
+      };
+    }
+  },
+
+  /**
+   * Get pre-generated branches for a checkpoint
+   */
+  getBranches: async (sessionId: string, checkpoint: number): Promise<{
+    branches: BackendBranch[];
+    branches_ready: boolean;
+  }> => {
+    try {
+      const { data } = await apiClient.get(`/api/story/branches/${sessionId}/${checkpoint}`);
+      return data;
+    } catch (error) {
+      console.error('Failed to get branches:', error);
+      return {
+        branches: [],
+        branches_ready: false,
+      };
     }
   },
 

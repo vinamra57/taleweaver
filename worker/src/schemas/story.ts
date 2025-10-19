@@ -50,6 +50,7 @@ export const StorySegmentSchema = z.object({
   text: z.string(),
   audio_url: z.string().url(),
   checkpoint_number: z.number().int().min(0), // 0 = start, 1 = first checkpoint, etc.
+  choice_text: z.string().optional(), // The choice text that leads to this segment (if applicable)
 });
 
 // ============================================================================
@@ -118,6 +119,10 @@ export const SessionSchema = z.object({
 
   // Pre-generated content
   segments: z.array(StorySegmentSchema), // All generated segments (including pre-generated branches)
+
+  // Async generation tracking
+  next_branches_ready: z.boolean().default(false), // Whether next branches are generated
+  generation_in_progress: z.boolean().default(false), // Whether background generation is happening
 
   // Metadata
   created_at: z.string().datetime(),
