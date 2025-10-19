@@ -25,6 +25,8 @@ export const MoralFocusSchema = z.enum([
 
 export const BranchChoiceSchema = z.enum(['A', 'B']);
 
+export const VoiceSelectionSchema = z.enum(['custom', 'princess', 'scientist', 'pirate', 'coach', 'explorer']);
+
 // ============================================================================
 // Child Info
 // ============================================================================
@@ -73,6 +75,7 @@ export const StartRequestSchema = z.object({
   story_length: StoryLengthSchema, // 1, 2, or 3 minutes
   interactive: z.boolean(),
   moral_focus: MoralFocusSchema,
+  voice_selection: VoiceSelectionSchema.optional().default('custom'), // Voice narrator selection
 });
 
 // POST /api/story/start - Response
@@ -127,6 +130,7 @@ export const SessionSchema = z.object({
   words_per_segment: z.number().int(), // Calculated word count per segment
 
   // Voice metadata
+  voice_selection: VoiceSelectionSchema.optional(), // User's voice selection (custom or preset)
   narrator_voice_id: z.string().optional(), // Generated ElevenLabs voice ID for this story (optional for backward compatibility)
   voice_description: z.string().optional(), // Description of the narrator's voice (for debugging)
 
@@ -199,6 +203,7 @@ export type AgeRange = z.infer<typeof AgeRangeSchema>;
 export type StoryLength = z.infer<typeof StoryLengthSchema>;
 export type MoralFocus = z.infer<typeof MoralFocusSchema>;
 export type BranchChoice = z.infer<typeof BranchChoiceSchema>;
+export type VoiceSelection = z.infer<typeof VoiceSelectionSchema>;
 export type Child = z.infer<typeof ChildSchema>;
 export type StorySegment = z.infer<typeof StorySegmentSchema>;
 export type StoryBranch = z.infer<typeof StoryBranchSchema>;

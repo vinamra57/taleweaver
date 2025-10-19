@@ -16,6 +16,9 @@ export type MoralFocus =
   | 'sharing'
   | 'perseverance';
 
+export type PresetVoice = 'princess' | 'scientist' | 'pirate' | 'coach' | 'explorer';
+export type VoiceSelection = 'custom' | PresetVoice;
+
 // ============================================================================
 // Child Profile
 // ============================================================================
@@ -86,6 +89,7 @@ export interface StartRequest {
   duration_min: DurationMin;
   interactive: boolean;
   moral_focus: MoralFocus;
+  voice_selection?: VoiceSelection; // Optional, defaults to 'custom' on backend
 }
 
 export interface ContinueRequest {

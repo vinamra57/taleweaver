@@ -10,6 +10,7 @@ import {
   MAX_INTERESTS,
   MORAL_FOCI,
   DEFAULT_MORAL_FOCUS,
+  VOICE_OPTIONS,
 } from '../lib/constants';
 import {
   AgeGroup,
@@ -19,6 +20,7 @@ import {
   Gender,
   MoralFocus,
   StartRequest,
+  VoiceSelection,
 } from '../lib/types';
 
 interface StoryFormProps {
@@ -83,6 +85,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
   const [durationMin, setDurationMin] = useState<DurationMin>(DEFAULT_DURATION_MIN);
   const [interactive, setInteractive] = useState<boolean>(DEFAULT_INTERACTIVE);
   const [moralFocus, setMoralFocus] = useState<MoralFocus>(DEFAULT_MORAL_FOCUS);
+  const [voiceSelection, setVoiceSelection] = useState<VoiceSelection>('custom');
   const [errors, setErrors] = useState<FormErrors>({});
   const [customInterest, setCustomInterest] = useState('');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
@@ -224,6 +227,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
         duration_min: durationMin,
         interactive,
         moral_focus: moralFocus,
+        voice_selection: voiceSelection,
       };
 
       onSubmit(payload);
@@ -481,6 +485,35 @@ export const StoryForm: React.FC<StoryFormProps> = ({
                 className={pillButtonClasses(moralFocus === mf)}
               >
                 {mf[0].toUpperCase() + mf.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="label-bedtime">Choose Narrator Voice</label>
+          <p className="text-sm text-bedtime-purple-dark mb-3">
+            Select who will tell your story
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {VOICE_OPTIONS.map((voice) => (
+              <button
+                key={voice.id}
+                type="button"
+                onClick={() => setVoiceSelection(voice.id)}
+                className={`p-4 rounded-2xl text-left transition-all ${
+                  voiceSelection === voice.id
+                    ? 'bg-bedtime-yellow text-white shadow-lg border-2 border-bedtime-yellow'
+                    : 'bg-white text-bedtime-purple-dark border-2 border-bedtime-purple-pale hover:border-bedtime-purple'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">{voice.icon}</span>
+                  <div className="flex-1">
+                    <h4 className="font-semibold mb-1">{voice.name}</h4>
+                    <p className="text-xs opacity-90">{voice.description}</p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>

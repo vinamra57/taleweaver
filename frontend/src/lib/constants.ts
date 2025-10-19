@@ -1,4 +1,4 @@
-import { Child, Gender, AgeGroup, DurationMin } from './types';
+import { Child, Gender, AgeGroup, DurationMin, PresetVoice } from './types';
 import type { MoralFocus } from './types';
 
 // API Configuration
@@ -89,3 +89,50 @@ export const LOADING_MESSAGES = [
 
 // Session storage key
 export const STORY_SESSION_STORAGE_KEY = 'taleweaver.storySession';
+
+// Voice Narrator Options
+export interface VoiceOption {
+  id: 'custom' | PresetVoice;
+  name: string;
+  icon: string;
+  description: string;
+}
+
+export const VOICE_OPTIONS: VoiceOption[] = [
+  {
+    id: 'custom',
+    name: 'Custom Voice',
+    icon: '✨',
+    description: 'AI-generated voice tailored to your story theme',
+  },
+  {
+    id: 'princess',
+    name: 'Princess',
+    icon: '👑',
+    description: 'Gentle, melodious voice with graceful elegance',
+  },
+  {
+    id: 'scientist',
+    name: 'Scientist',
+    icon: '🔬',
+    description: 'Intellectual, precise voice with quirky excitement',
+  },
+  {
+    id: 'pirate',
+    name: 'Pirate',
+    icon: '🏴‍☠️',
+    description: 'Boisterous, gravelly voice with adventurous spirit',
+  },
+  {
+    id: 'coach',
+    name: 'Coach',
+    icon: '🏃‍♀️',
+    description: 'Energetic, motivational voice with encouraging tone',
+  },
+  {
+    id: 'explorer',
+    name: 'Explorer',
+    icon: '🧭',
+    description: 'Confident, curious voice full of discovery',
+  },
+];
