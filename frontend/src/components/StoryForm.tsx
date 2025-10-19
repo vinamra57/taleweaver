@@ -23,6 +23,7 @@ import {
   StartRequest,
   VoiceSelection,
   ClonedVoice,
+  PresetVoice,
 } from '../lib/types';
 import { VoiceRecorder } from './VoiceRecorder';
 import { useAuth } from '../contexts/AuthContext';

@@ -19,7 +19,7 @@ export function VoiceRecorder({ onAudioReady, isLoading }: VoiceRecorderProps) {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Cleanup on unmount

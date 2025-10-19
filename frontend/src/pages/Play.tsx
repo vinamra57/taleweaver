@@ -384,19 +384,19 @@ export const Play: React.FC = () => {
     };
   }, []);
 
-  const playAudio = (audioUrl: string) => {
+  // Play audio from the beginning - always restarts
+  const playFromBeginning = (audioUrl: string) => {
     const audioEl = audioRef.current;
     if (!audioEl) {
       return;
     }
 
-    // Only set src if it's a different audio file
-    if (audioEl.src !== audioUrl) {
-      audioEl.src = audioUrl;
-      setCurrentPlayingUrl(audioUrl);
-    }
+    // Always set source and reset time to ensure restart from beginning
+    audioEl.src = audioUrl;
+    audioEl.currentTime = 0;
+    setCurrentPlayingUrl(audioUrl);
+    setAudioError(null);
 
-    setAudioError(null); // Clear any previous errors
     audioEl.play().catch((err) => {
       console.error('Audio playback failed:', err);
       setAudioError('Unable to play audio. Please try again.');
@@ -404,20 +404,46 @@ export const Play: React.FC = () => {
     });
   };
 
-  const pauseAudio = () => {
+  // Toggle between pause and resume for current audio
+  const togglePauseResume = () => {
+    const audioEl = audioRef.current;
+    if (!audioEl || !audioEl.src) {
+      return;
+    }
+
+    if (isPlaying) {
+      audioEl.pause();
+    } else {
+      setAudioError(null);
+      audioEl.play().catch((err) => {
+        console.error('Audio playback failed:', err);
+        setAudioError('Unable to play audio. Please try again.');
+      });
+    }
+  };
+
+  // Legacy function for previous entries and non-interactive segments
+  const toggleAudio = (audioUrl: string) => {
     const audioEl = audioRef.current;
     if (!audioEl) {
       return;
     }
-    audioEl.pause();
-    setCurrentPlayingUrl(null); // Clear playing URL on pause
-  };
 
-  const toggleAudio = (audioUrl: string) => {
+    // If it's the same audio and playing, pause it
     if (currentPlayingUrl === audioUrl && isPlaying) {
-      pauseAudio();
+      audioEl.pause();
     } else {
-      playAudio(audioUrl);
+      // Otherwise, play from beginning
+      audioEl.src = audioUrl;
+      audioEl.currentTime = 0;
+      setCurrentPlayingUrl(audioUrl);
+      setAudioError(null);
+
+      audioEl.play().catch((err) => {
+        console.error('Audio playback failed:', err);
+        setAudioError('Unable to play audio. Please try again.');
+        setCurrentPlayingUrl(null);
+      });
     }
   };
 
@@ -689,19 +715,21 @@ export const Play: React.FC = () => {
             <div className="flex items-center gap-4 p-4 bg-bedtime-purple-pale/30 rounded-xl">
               <div className="flex gap-2">
                 <button
-                  onClick={() => playAudio(currentInteractiveEntry.segment.audio_url)}
+                  onClick={() => playFromBeginning(currentInteractiveEntry.segment.audio_url)}
                   className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-                  aria-label="Play narration"
+                  aria-label="Play from beginning"
+                  title="Play from beginning"
                 >
                   ▶
                 </button>
                 <button
-                  onClick={pauseAudio}
-                  disabled={!(currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying)}
+                  onClick={togglePauseResume}
+                  disabled={!currentPlayingUrl || currentPlayingUrl !== currentInteractiveEntry.segment.audio_url}
                   className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Pause narration"
+                  aria-label={isPlaying ? "Pause" : "Resume"}
+                  title={isPlaying ? "Pause" : "Resume"}
                 >
-                  ⏸
+                  {isPlaying ? '⏸' : '▶'}
                 </button>
               </div>
               <div className="flex-1">
@@ -711,7 +739,9 @@ export const Play: React.FC = () => {
                 <p className="text-xs text-bedtime-purple/60">
                   {currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying
                     ? 'Playing...'
-                    : 'Tap to hear the narrated version'}
+                    : currentPlayingUrl === currentInteractiveEntry.segment.audio_url && !isPlaying
+                    ? 'Paused - Click resume to continue'
+                    : 'Click play to start'}
                 </p>
               </div>
               <div className="text-xs text-bedtime-purple/60 font-semibold uppercase tracking-wide">
