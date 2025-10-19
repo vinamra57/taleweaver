@@ -262,6 +262,93 @@ export async function generateVoiceFromDescription(
 }
 
 /**
+ * Clone a voice from audio file using Instant Voice Clone API
+ * Returns the voice ID for the cloned voice
+ */
+export async function cloneVoiceFromAudio(
+  audioFile: ArrayBuffer,
+  name: string,
+  env: Env
+): Promise<string> {
+  try {
+    logger.debug('Cloning voice from audio', { name, audioSize: audioFile.byteLength });
+
+    // Create form data for multipart upload
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('files', new Blob([audioFile], { type: 'audio/mpeg' }), 'voice.mp3');
+    formData.append('remove_background_noise', 'true');
+
+    const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': env.ELEVENLABS_API_KEY,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new ElevenLabsError(
+        `Voice cloning failed (${response.status}): ${errorText}`
+      );
+    }
+
+    const data = (await response.json()) as any;
+    const voiceId = data.voice_id;
+
+    if (!voiceId) {
+      throw new ElevenLabsError('No voice_id returned from cloning API');
+    }
+
+    logger.info('Voice cloned successfully', { voiceId, name });
+
+    return voiceId;
+  } catch (error) {
+    logger.error('Voice cloning failed', error);
+    throw error instanceof ElevenLabsError
+      ? error
+      : new ElevenLabsError(`Voice cloning error: ${error}`);
+  }
+}
+
+/**
+ * Delete a voice from ElevenLabs library
+ * Returns true if deletion was successful
+ */
+export async function deleteVoiceFromElevenLabs(
+  voiceId: string,
+  env: Env
+): Promise<boolean> {
+  try {
+    logger.debug('Deleting voice from ElevenLabs', { voiceId });
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
+      method: 'DELETE',
+      headers: {
+        'xi-api-key': env.ELEVENLABS_API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.warn(
+        `Voice deletion from ElevenLabs failed (${response.status}): ${errorText}`
+      );
+      // Don't throw - we still want to delete from our storage even if ElevenLabs deletion fails
+      return false;
+    }
+
+    logger.info('Voice deleted from ElevenLabs successfully', { voiceId });
+    return true;
+  } catch (error) {
+    logger.error('Voice deletion from ElevenLabs failed', error);
+    // Don't throw - allow cleanup to continue
+    return false;
+  }
+}
+
+/**
  * Validate TTS requirements
  */
 export function validateTTSInput(text: string): void {

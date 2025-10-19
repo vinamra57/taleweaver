@@ -8,6 +8,7 @@ import { Signup } from './pages/Signup';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Profiles } from './pages/Profiles';
+import { ClonedVoices } from './pages/ClonedVoices';
 import './styles/globals.css';
 
 function App() {
@@ -28,6 +29,12 @@ function App() {
           <Route path="/profiles" element={
             <ProtectedRoute>
               <Profiles />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/cloned-voices" element={
+            <ProtectedRoute>
+              <ClonedVoices />
             </ProtectedRoute>
           } />
 

@@ -20,6 +20,8 @@ export const Dashboard: React.FC = () => {
   const [stories, setStories] = useState<SavedStory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,6 +47,33 @@ export const Dashboard: React.FC = () => {
       setError('Failed to load stories');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (storyId: string) => {
+    setDeletingId(storyId);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/stories/${storyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        setStories((prev) => prev.filter((s) => s.id !== storyId));
+        setShowDeleteConfirm(null);
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to delete story');
+      }
+    } catch (error) {
+      console.error('Failed to delete story', error);
+      setError('Failed to delete story');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -81,7 +110,7 @@ export const Dashboard: React.FC = () => {
            </div>
          </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <button
             onClick={() => navigate('/create')}
             className="bedtime-card hover:shadow-xl transition-shadow text-left"
@@ -103,6 +132,18 @@ export const Dashboard: React.FC = () => {
             </h3>
             <p className="text-bedtime-purple-dark">
               Save profiles for quick story creation
+            </p>
+          </button>
+
+          <button
+            onClick={() => navigate('/cloned-voices')}
+            className="bedtime-card hover:shadow-xl transition-shadow text-left"
+          >
+            <h3 className="text-2xl text-bedtime-purple font-display font-medium mb-2">
+              Your Cloned Voices
+            </h3>
+            <p className="text-bedtime-purple-dark">
+              Manage voices for personalized narration
             </p>
           </button>
         </div>
@@ -140,6 +181,32 @@ export const Dashboard: React.FC = () => {
                     >
                       Play Story
                     </button>
+
+                    {showDeleteConfirm === story.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(story.id)}
+                          disabled={deletingId === story.id}
+                          className="btn-secondary flex-1 bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          {deletingId === story.id ? 'Deleting...' : 'Confirm'}
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(null)}
+                          disabled={deletingId === story.id}
+                          className="btn-secondary flex-1"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowDeleteConfirm(story.id)}
+                        className="btn-secondary w-full hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                      >
+                        Delete Story
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

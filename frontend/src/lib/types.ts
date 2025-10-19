@@ -17,7 +17,7 @@ export type MoralFocus =
   | 'perseverance';
 
 export type PresetVoice = 'princess' | 'scientist' | 'pirate' | 'coach' | 'explorer';
-export type VoiceSelection = 'custom' | PresetVoice;
+export type VoiceSelection = 'custom' | PresetVoice | string; // string allows for "cloned:{voice_id}" format
 
 // ============================================================================
 // Child Profile
@@ -29,6 +29,18 @@ export interface Child {
   age_group: AgeGroup;
   interests: string[];  // max 5
   context?: string;     // optional
+}
+
+// ============================================================================
+// Cloned Voice
+// ============================================================================
+
+export interface ClonedVoice {
+  id: string;
+  user_id: string;
+  voice_id: string; // ElevenLabs voice ID
+  name: string;
+  created_at: string;
 }
 
 // ============================================================================

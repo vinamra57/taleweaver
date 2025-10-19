@@ -11,6 +11,7 @@ import {
   MORAL_FOCI,
   DEFAULT_MORAL_FOCUS,
   VOICE_OPTIONS,
+  API_BASE_URL,
 } from '../lib/constants';
 import {
   AgeGroup,
@@ -21,7 +22,10 @@ import {
   MoralFocus,
   StartRequest,
   VoiceSelection,
+  ClonedVoice,
 } from '../lib/types';
+import { VoiceRecorder } from './VoiceRecorder';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StoryFormProps {
   onSubmit: (request: StartRequest) => void;
@@ -81,6 +85,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
   presetKey = null,
   profileData = null,
 }) => {
+  const { accessToken, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState<ChildFormState>(() => createDefaultChildState());
   const [durationMin, setDurationMin] = useState<DurationMin>(DEFAULT_DURATION_MIN);
   const [interactive, setInteractive] = useState<boolean>(DEFAULT_INTERACTIVE);
@@ -89,6 +94,14 @@ export const StoryForm: React.FC<StoryFormProps> = ({
   const [errors, setErrors] = useState<FormErrors>({});
   const [customInterest, setCustomInterest] = useState('');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
+
+  // Voice cloning state
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
+  const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<string | null>(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const [cloneSuccess, setCloneSuccess] = useState<string | null>(null);
 
   const clearFieldError = (field: string) => {
     setErrors((prev) => {
@@ -150,6 +163,30 @@ export const StoryForm: React.FC<StoryFormProps> = ({
     }
   }, [profileData]);
 
+  // Fetch cloned voices on mount
+  useEffect(() => {
+    const fetchClonedVoices = async () => {
+      try {
+        if (!accessToken) return; // Not authenticated
+
+        const response = await fetch(`${API_BASE_URL}/api/voices/cloned`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setClonedVoices(data.voices || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch cloned voices:', error);
+      }
+    };
+
+    fetchClonedVoices();
+  }, [accessToken]);
+
   const handleInterestToggle = (interest: string) => {
     markCustom();
     setFormData((prev) => {
@@ -205,6 +242,71 @@ export const StoryForm: React.FC<StoryFormProps> = ({
     setCustomInterest('');
   };
 
+  const handleVoiceClone = async (audioFile: File, voiceName: string) => {
+    setIsCloning(true);
+    setCloneError(null);
+    setCloneSuccess(null);
+
+    try {
+      if (!accessToken) {
+        setCloneError('Please log in to clone your voice');
+        setIsCloning(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('name', voiceName);
+      formData.append('audio', audioFile);
+
+      const response = await fetch(`${API_BASE_URL}/api/voices/clone`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Voice cloning failed');
+      }
+
+      const data = await response.json();
+      const newVoice: ClonedVoice = data.voice;
+
+      // Add to cloned voices list
+      setClonedVoices((prev) => [newVoice, ...prev]);
+
+      // Auto-select the new voice
+      setSelectedClonedVoiceId(newVoice.voice_id);
+
+      // Hide recorder and show success
+      setShowVoiceRecorder(false);
+      setCloneSuccess(`Voice "${voiceName}" cloned successfully!`);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setCloneSuccess(null), 5000);
+    } catch (error: any) {
+      setCloneError(error.message || 'Failed to clone voice');
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  const handleVoiceSelectionChange = (selection: 'custom' | 'clone' | PresetVoice) => {
+    setVoiceSelection(selection);
+    setCloneError(null);
+    setCloneSuccess(null);
+
+    if (selection === 'clone') {
+      // Show recorder if no cloned voices OR if user wants to record new
+      // For now, always show the option to record new
+    } else {
+      setShowVoiceRecorder(false);
+      setSelectedClonedVoiceId(null);
+    }
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setErrors({});
@@ -222,12 +324,29 @@ export const StoryForm: React.FC<StoryFormProps> = ({
         context: validated.context ?? '',
       }));
 
+      // Determine final voice selection
+      let finalVoiceSelection: VoiceSelection = voiceSelection;
+
+      if (voiceSelection === 'clone') {
+        if (!isAuthenticated) {
+          setErrors({ voice: 'Please log in to use voice cloning' });
+          return;
+        }
+        if (selectedClonedVoiceId) {
+          // Use selected cloned voice
+          finalVoiceSelection = `cloned:${selectedClonedVoiceId}`;
+        } else {
+          setErrors({ voice: 'Please select or clone a voice' });
+          return;
+        }
+      }
+
       const payload: StartRequest = {
         child: validated,
         duration_min: durationMin,
         interactive,
         moral_focus: moralFocus,
-        voice_selection: voiceSelection,
+        voice_selection: finalVoiceSelection,
       };
 
       onSubmit(payload);
@@ -500,7 +619,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
               <button
                 key={voice.id}
                 type="button"
-                onClick={() => setVoiceSelection(voice.id)}
+                onClick={() => handleVoiceSelectionChange(voice.id as any)}
                 className={`p-4 rounded-2xl text-left transition-all ${
                   voiceSelection === voice.id
                     ? 'bg-bedtime-yellow text-white shadow-lg border-2 border-bedtime-yellow'
@@ -517,6 +636,75 @@ export const StoryForm: React.FC<StoryFormProps> = ({
               </button>
             ))}
           </div>
+
+          {voiceSelection === 'clone' && (
+            <div className="mt-6 border-2 border-bedtime-purple-pale rounded-2xl p-6">
+              {!isAuthenticated && (
+                <div className="mb-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg">
+                  <p className="font-semibold mb-2">Login Required</p>
+                  <p className="text-sm">You need to log in to clone and save your voice. You can still create stories with other voice options without logging in.</p>
+                </div>
+              )}
+
+              {cloneSuccess && (
+                <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg">
+                  {cloneSuccess}
+                </div>
+              )}
+
+              {cloneError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-800 rounded-lg">
+                  {cloneError}
+                </div>
+              )}
+
+              {isAuthenticated && clonedVoices.length > 0 && (
+                <div className="mb-4">
+                  <label className="label-bedtime text-sm">Use Previously Cloned Voice</label>
+                  <select
+                    value={selectedClonedVoiceId || ''}
+                    onChange={(e) => setSelectedClonedVoiceId(e.target.value || null)}
+                    className="input-bedtime"
+                    disabled={!isAuthenticated}
+                  >
+                    <option value="">Select a voice...</option>
+                    {clonedVoices.map((voice) => (
+                      <option key={voice.id} value={voice.voice_id}>
+                        {voice.name} (created {new Date(voice.created_at).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {isAuthenticated && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="label-bedtime text-sm">
+                      {clonedVoices.length > 0 ? 'Or Clone a New Voice' : 'Clone Your Voice'}
+                    </label>
+                    {!showVoiceRecorder && (
+                      <button
+                        type="button"
+                        onClick={() => setShowVoiceRecorder(true)}
+                        className="text-sm text-bedtime-purple hover:text-bedtime-purple-dark font-semibold"
+                      >
+                        + New Voice Clone
+                      </button>
+                    )}
+                  </div>
+
+                  {showVoiceRecorder && (
+                    <VoiceRecorder onAudioReady={handleVoiceClone} isLoading={isCloning} />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {errors.voice && (
+            <p className="text-red-400 text-sm mt-2">{errors.voice}</p>
+          )}
         </div>
 
         <div className="mb-4">
