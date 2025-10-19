@@ -6,7 +6,6 @@ import {
   ChoiceId,
   ChoiceOption,
   CheckpointSegment,
-  EmotionHint,
   StoredStorySession,
 } from '../lib/types';
 import { STORY_SESSION_STORAGE_KEY } from '../lib/constants';
@@ -14,14 +13,152 @@ import api from '../lib/api';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
 
-const emotionLabels: Record<EmotionHint, string> = {
-  warm: 'Warm',
-  curious: 'Curious',
-  tense: 'Tense',
-  relieved: 'Relieved',
+// Backend Session type (simplified - only fields we need for conversion)
+type BackendSession = {
+  session_id: string;
+  child: {
+    name: string;
+    gender: 'male' | 'female';
+    age_range: '4-6' | '7-9' | '10-12';
+    interests: string; // comma-separated
+    context?: string;
+  };
+  story_length: 1 | 2 | 3;
+  interactive: boolean;
+  moral_focus: string;
+  total_checkpoints: number;
+  current_checkpoint: number;
+  chosen_path: ('A' | 'B')[]; // History of choices
+  segments: {
+    id: string;
+    text: string;
+    audio_url: string;
+    checkpoint_number: number;
+    choice_text?: string;
+  }[];
+  evaluation_summary?: string;
 };
 
-const formatEmotion = (emotion: EmotionHint) => emotionLabels[emotion] || emotion;
+// Convert backend Session to frontend StoredStorySession
+function convertBackendSessionToFrontend(backendSession: BackendSession): StoredStorySession {
+  const child = {
+    name: backendSession.child.name,
+    gender: backendSession.child.gender,
+    age_group: backendSession.child.age_range, // age_range → age_group
+    interests: backendSession.child.interests.split(',').map(i => i.trim()), // string → array
+    context: backendSession.child.context,
+  };
+
+  const settings = {
+    duration_min: backendSession.story_length,
+    interactive: backendSession.interactive,
+    age_group: backendSession.child.age_range,
+  };
+
+  const reached_final = backendSession.interactive
+    ? backendSession.current_checkpoint >= backendSession.total_checkpoints
+    : true;
+
+  if (backendSession.interactive) {
+    // Build interactive state from segments
+    // Find current segment based on chosen_path
+    const currentCheckpoint = backendSession.current_checkpoint;
+
+    // Find the current segment
+    const currentSegment = backendSession.segments.find(
+      seg => seg.checkpoint_number === currentCheckpoint
+    );
+
+    if (!currentSegment) {
+      throw new Error(`Current segment not found for checkpoint ${currentCheckpoint}`);
+    }
+
+    // Build history from chosen_path and segments
+    const history = backendSession.segments
+      .filter(seg => seg.checkpoint_number <= currentCheckpoint)
+      .filter(seg => {
+        // Include checkpoint 0 (start)
+        if (seg.checkpoint_number === 0) return true;
+        // Include segments that match the chosen path
+        const pathIndex = seg.checkpoint_number - 1;
+        if (pathIndex >= backendSession.chosen_path.length) return false;
+        const chosenBranch = backendSession.chosen_path[pathIndex];
+        // Segment ID format: "segment_1a", "segment_2b", etc.
+        return seg.id.toLowerCase().endsWith(chosenBranch.toLowerCase());
+      })
+      .sort((a, b) => a.checkpoint_number - b.checkpoint_number)
+      .map(seg => ({
+        segment: {
+          checkpoint_index: seg.checkpoint_number,
+          text: seg.text,
+          emotion_hint: 'warm' as const, // Default emotion
+          audio_url: seg.audio_url,
+        },
+        chosenOption: seg.choice_text,
+      }));
+
+    // Find next options if not at final checkpoint
+    const next_options: ChoiceOption[] = [];
+    if (!reached_final) {
+      const nextCheckpoint = currentCheckpoint + 1;
+      const nextSegments = backendSession.segments.filter(
+        seg => seg.checkpoint_number === nextCheckpoint
+      );
+
+      for (const seg of nextSegments) {
+        const branchId = seg.id.slice(-1).toUpperCase() as 'A' | 'B';
+        next_options.push({
+          id: branchId,
+          label: seg.choice_text || `Choice ${branchId}`,
+          segment: {
+            from_checkpoint: currentCheckpoint,
+            to_checkpoint: nextCheckpoint,
+            text: seg.text,
+            emotion_hint: 'warm' as const,
+            audio_url: seg.audio_url,
+          },
+        });
+      }
+    }
+
+    return {
+      session_id: backendSession.session_id,
+      child,
+      settings: { ...settings, interactive: true },
+      interactive_state: {
+        current_segment: {
+          checkpoint_index: currentSegment.checkpoint_number,
+          text: currentSegment.text,
+          emotion_hint: 'warm' as const,
+          audio_url: currentSegment.audio_url,
+        },
+        next_options,
+        remaining_checkpoints: backendSession.total_checkpoints - currentCheckpoint,
+        history,
+      },
+      reached_final,
+      ending_reflection: reached_final ? 'The end — nice choices! Sleep tight 🌙' : undefined,
+      evaluation_summary: backendSession.evaluation_summary,
+    };
+  } else {
+    // Non-interactive: single segment
+    return {
+      session_id: backendSession.session_id,
+      child,
+      settings: { ...settings, interactive: false },
+      non_interactive_state: {
+        segments: backendSession.segments.map(seg => ({
+          checkpoint_index: seg.checkpoint_number,
+          text: seg.text,
+          emotion_hint: 'warm' as const,
+          audio_url: seg.audio_url,
+        })),
+      },
+      reached_final: true,
+      evaluation_summary: backendSession.evaluation_summary,
+    };
+  }
+}
 
 export const Play: React.FC = () => {
   const navigate = useNavigate();
@@ -33,17 +170,45 @@ export const Play: React.FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState<string | null>(null);
+  const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
 
-  // Restore story session from storage
+  // Load story from saved story or session storage
   useEffect(() => {
-    const stored = sessionStorage.getItem(STORY_SESSION_STORAGE_KEY);
-    if (!stored) {
-      navigate('/create');
-      return;
-    }
+    const loadStory = async () => {
+      // Check if we're loading a saved story
+      const searchParams = new URLSearchParams(window.location.search);
+      const storyId = searchParams.get('storyId');
 
-    try {
-      const parsed: StoredStorySession = JSON.parse(stored);
+      if (storyId) {
+        // Load saved story from backend
+        try {
+          setIsLoading(true);
+          const { session } = await api.getStory(storyId);
+
+          // Convert backend session to frontend format
+          const frontendSession = convertBackendSessionToFrontend(session);
+
+          // Save to sessionStorage
+          sessionStorage.setItem(STORY_SESSION_STORAGE_KEY, JSON.stringify(frontendSession));
+          setSessionState(frontendSession);
+        } catch (err: any) {
+          console.error('Failed to load saved story', err);
+          setError(err.message || 'Failed to load story');
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Load from sessionStorage (current story)
+      const stored = sessionStorage.getItem(STORY_SESSION_STORAGE_KEY);
+      if (!stored) {
+        navigate('/create');
+        return;
+      }
+
+      try {
+        const parsed: StoredStorySession = JSON.parse(stored);
 
       if (!parsed.session_id || !parsed.child || !parsed.settings) {
         throw new Error('Session data incomplete');
@@ -76,6 +241,9 @@ export const Play: React.FC = () => {
       sessionStorage.removeItem(STORY_SESSION_STORAGE_KEY);
       navigate('/create');
     }
+    };
+
+    loadStory();
   }, [navigate]);
 
   // Persist updates back into storage
@@ -305,6 +473,31 @@ export const Play: React.FC = () => {
     }
   };
 
+  const handleGetEvaluation = async () => {
+    if (!sessionState) return;
+
+    setIsLoadingEvaluation(true);
+    try {
+      const response = await api.getEvaluation(sessionState.session_id);
+
+      // Save evaluation to session state
+      setSessionState(prev => {
+        if (!prev) return prev;
+        const updated = {
+          ...prev,
+          evaluation_summary: response.evaluation.summary,
+        };
+        // Persist to sessionStorage
+        sessionStorage.setItem(STORY_SESSION_STORAGE_KEY, JSON.stringify(updated));
+        return updated;
+      });
+    } catch (err: any) {
+      alert(err.message || 'Failed to get evaluation');
+    } finally {
+      setIsLoadingEvaluation(false);
+    }
+  };
+
   const handleStartNewStory = () => {
     sessionStorage.removeItem(STORY_SESSION_STORAGE_KEY);
     setSessionState(null);
@@ -498,6 +691,26 @@ export const Play: React.FC = () => {
               <p className="text-bedtime-purple-dark font-body mb-6 leading-relaxed">
                 {sessionState.ending_reflection}
               </p>
+
+              {/* Evaluation Section */}
+              {sessionState.evaluation_summary ? (
+                <div className="mb-6">
+                  <h3 className="text-lg font-display font-medium text-bedtime-purple mb-2">
+                    {sessionState.child.name}'s Story Reflection
+                  </h3>
+                  <p className="text-bedtime-purple-dark font-body leading-relaxed p-4 bg-bedtime-yellow/10 rounded-lg">
+                    {sessionState.evaluation_summary}
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGetEvaluation}
+                  disabled={isLoadingEvaluation}
+                  className="btn-primary mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoadingEvaluation ? 'Creating Reflection...' : 'Get Story Reflection'}
+                </button>
+              )}
             </div>
           ) : (
             <div className="bedtime-card mb-6">

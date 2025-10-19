@@ -97,6 +97,18 @@ export const ContinueResponseSchema = z.object({
   story_complete: z.boolean(), // true if this was the final segment
 });
 
+// POST /api/story/evaluate - Request
+export const EvaluationRequestSchema = z.object({
+  session_id: z.string().uuid(),
+});
+
+// POST /api/story/evaluate - Response
+export const EvaluationResponseSchema = z.object({
+  evaluation: z.object({
+    summary: z.string().min(50).max(500), // One paragraph summary
+  }),
+});
+
 // ============================================================================
 // Session Storage Schema (KV)
 // ============================================================================
@@ -123,6 +135,9 @@ export const SessionSchema = z.object({
   // Async generation tracking
   next_branches_ready: z.boolean().default(false), // Whether next branches are generated
   generation_in_progress: z.boolean().default(false), // Whether background generation is happening
+
+  // Evaluation (generated after story completion)
+  evaluation_summary: z.string().optional(), // One paragraph evaluation of child's choices
 
   // Metadata
   created_at: z.string().datetime(),
@@ -191,3 +206,5 @@ export type GeminiPromptResponse = z.infer<typeof GeminiPromptResponseSchema>;
 export type GeminiNonInteractiveResponse = z.infer<typeof GeminiNonInteractiveResponseSchema>;
 export type GeminiFirstSegmentResponse = z.infer<typeof GeminiFirstSegmentResponseSchema>;
 export type GeminiContinuationResponse = z.infer<typeof GeminiContinuationResponseSchema>;
+export type EvaluationRequest = z.infer<typeof EvaluationRequestSchema>;
+export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;

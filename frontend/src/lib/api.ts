@@ -8,6 +8,7 @@ import type {
   ContinueResponse,
   StartRequest,
   ContinueRequest,
+  EvaluationResponse,
 } from './types';
 
 type BackendSegment = {
@@ -346,6 +347,46 @@ export const api = {
       return true;
     } catch {
       return false;
+    }
+  },
+
+  /**
+   * Get evaluation for a completed story
+   */
+  getEvaluation: async (sessionId: string): Promise<EvaluationResponse> => {
+    try {
+      const { data } = await apiClient.post('/api/story/evaluate', {
+        session_id: sessionId,
+      });
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          (error.response?.data as any)?.message ||
+          (error.response?.data as any)?.error ||
+          'Failed to get evaluation. Please try again.'
+        );
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Get a saved story by ID
+   */
+  getStory: async (storyId: string): Promise<{ story: any; session: any }> => {
+    try {
+      const { data } = await apiClient.get(`/api/stories/${storyId}`);
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          (error.response?.data as any)?.message ||
+          (error.response?.data as any)?.error ||
+          'Failed to load story. Please try again.'
+        );
+      }
+      throw error;
     }
   },
 };

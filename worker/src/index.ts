@@ -36,6 +36,7 @@ import {
   handleDeleteStory,
   handleGetSharedStory,
 } from './routes/user/stories';
+import { handleStoryEvaluation } from './routes/storyEvaluate';
 
 // Auth middleware
 import { requireAuth, optionalAuth } from './auth/middleware';
@@ -77,6 +78,7 @@ app.get('/', (c) => {
       // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
+      evaluate: 'POST /api/story/evaluate',
       status: 'GET /api/story/status/:sessionId',
       branches: 'GET /api/story/branches/:sessionId/:checkpoint',
       audio: 'GET /audio/:sessionId/:sceneId',
@@ -98,6 +100,7 @@ app.post('/api/auth/change-password', requireAuth, handleChangePassword);
 // If authenticated, stories can be saved to user account
 app.post('/api/story/start', optionalAuth, handleStoryStart);
 app.post('/api/story/continue', optionalAuth, handleStoryContinue);
+app.post('/api/story/evaluate', optionalAuth, handleStoryEvaluation);
 app.get('/api/story/status/:sessionId', handleBranchStatus);
 app.get('/api/story/branches/:sessionId/:checkpoint', handleGetBranches);
 

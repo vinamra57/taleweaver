@@ -4,6 +4,29 @@ import type { DurableObjectNamespace } from '@cloudflare/workers-types';
  * Cloudflare Worker Environment Bindings
  * This interface defines all environment variables, secrets, and bindings available to the worker
  */
+
+// UserDO method signatures for proper typing
+export interface UserDOStub {
+  createUser(user: any): Promise<any>;
+  getUserById(userId: string): Promise<any>;
+  getUserByEmail(email: string): Promise<any>;
+  updateUser(userId: string, updates: any): Promise<any>;
+  createChildProfile(profile: any): Promise<any>;
+  getChildProfile(profileId: string): Promise<any>;
+  getUserChildProfiles(userId: string): Promise<any[]>;
+  updateChildProfile(profileId: string, updates: any): Promise<any>;
+  deleteChildProfile(profileId: string, userId: string): Promise<boolean>;
+  saveStory(story: any): Promise<any>;
+  getStory(storyId: string): Promise<any>;
+  getStoryByShareId(shareId: string): Promise<any>;
+  getUserStories(userId: string, limit?: number): Promise<any[]>;
+  updateStory(storyId: string, updates: any): Promise<any>;
+  deleteStory(storyId: string, userId: string): Promise<boolean>;
+  createSession(session: any): Promise<any>;
+  getSession(sessionId: string): Promise<any>;
+  deleteSession(sessionId: string): Promise<boolean>;
+}
+
 export interface Env {
   // KV Namespace for session storage
   TALEWEAVER_SESSIONS: KVNamespace;

@@ -141,6 +141,20 @@ export interface ContinueResponseFinal {
 export type ContinueResponse = ContinueResponseMid | ContinueResponseFinal;
 
 // ============================================================================
+// Evaluation Types
+// ============================================================================
+
+export interface EvaluationRequest {
+  session_id: string;
+}
+
+export interface EvaluationResponse {
+  evaluation: {
+    summary: string; // One paragraph summary
+  };
+}
+
+// ============================================================================
 // Zod Schemas for Validation
 // ============================================================================
 
@@ -248,4 +262,5 @@ export interface StoredStorySession {
   non_interactive_state?: NonInteractiveStoryState;
   reached_final?: boolean;
   ending_reflection?: string;
+  evaluation_summary?: string; // One paragraph evaluation
 }

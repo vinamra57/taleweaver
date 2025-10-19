@@ -40,7 +40,10 @@ export const Create: React.FC = () => {
           current_segment: response.current_segment,
           next_options: response.next_options,
           remaining_checkpoints: response.remaining_checkpoints,
-          history: [response.current_segment],
+          history: [{
+            segment: response.current_segment,
+            chosenOption: undefined, // First segment has no choice
+          }],
         };
       } else {
         sessionToStore.non_interactive_state = {

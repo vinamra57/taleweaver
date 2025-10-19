@@ -12,7 +12,7 @@ import { Context } from 'hono';
 import type { Env } from '../../types/env';
 import type { SavedStory } from '../../schemas/auth/user';
 import { SaveStoryRequestSchema } from '../../schemas/auth/user';
-import { requireAuthUser, optionalAuth } from '../../auth/middleware';
+import { requireAuthUser } from '../../auth/middleware';
 import { getSession } from '../../services/kv';
 import { generateUUID } from '../../utils/validation';
 import { ValidationError } from '../../utils/errors';
@@ -44,7 +44,7 @@ export async function handleListStories(c: Context<{ Bindings: Env }>): Promise<
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const stories = await userDO.getUserStories(authUser.id);
 
@@ -75,7 +75,7 @@ export async function handleGetStory(c: Context<{ Bindings: Env }>): Promise<Res
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const story = await userDO.getStory(storyId);
 
@@ -145,7 +145,7 @@ export async function handleSaveStory(c: Context<{ Bindings: Env }>): Promise<Re
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const now = new Date().toISOString();
     const savedStory: SavedStory = {
@@ -203,7 +203,7 @@ export async function handleShareStory(c: Context<{ Bindings: Env }>): Promise<R
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const story = await userDO.getStory(storyId);
 
@@ -281,7 +281,7 @@ export async function handleDeleteStory(c: Context<{ Bindings: Env }>): Promise<
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const success = await userDO.deleteStory(storyId, authUser.id);
 
@@ -324,7 +324,7 @@ export async function handleGetSharedStory(c: Context<{ Bindings: Env }>): Promi
 
     // Get Durable Object instance
     const id = c.env.USER_DO.idFromName('users');
-    const userDO = c.env.USER_DO.get(id);
+    const userDO = c.env.USER_DO.get(id) as any;
 
     const story = await userDO.getStoryByShareId(shareId);
 
