@@ -567,6 +567,22 @@ export const Play: React.FC = () => {
     <div className="container-bedtime min-h-screen">
       <audio ref={audioRef} />
 
+      {/* Navigation buttons */}
+      <div className="pt-4 flex justify-end gap-4">
+        <button
+          onClick={() => navigate('/')}
+          className="btn-secondary"
+        >
+          Home
+        </button>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="btn-secondary"
+        >
+          Dashboard
+        </button>
+      </div>
+
       <div className="text-center mb-8 pt-8">
         <button
           onClick={() => navigate('/')}
