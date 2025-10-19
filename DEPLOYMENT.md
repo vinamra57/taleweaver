@@ -18,18 +18,18 @@ Before deploying, you need to set your secrets in production:
 ```bash
 cd worker
 
-# Set your API keys
+# Set your API keys (you will be prompted to enter each one)
 npx wrangler secret put GEMINI_API_KEY
-# When prompted, paste: AIzaSyDU_IELVqsJBJkcqS2yOgteSWVEtvx1bdU
+# Paste your Gemini API key when prompted
 
 npx wrangler secret put ELEVENLABS_API_KEY
-# When prompted, paste: sk_d71e0463d7f898b0810cf71e7c790e246d4744331788d9b3
+# Paste your ElevenLabs API key when prompted
 
 npx wrangler secret put ELEVENLABS_VOICE_ID
-# When prompted, paste: Fahco4VZzobUeiPqni1S
+# Paste your ElevenLabs voice ID when prompted
 
 npx wrangler secret put JWT_SECRET
-# When prompted, paste: WYxKCYvnQ/W3C3T1k6AxT7LCeMZyCV/3uHAWSqFEqWMs4iYbtld0sRHLvyYHJIzC/V5Ta0HZTs2etQvR+DGIpA==
+# Paste your JWT secret when prompted (generate with: openssl rand -base64 64)
 ```
 
 ### 2. Create R2 Bucket (if not exists)
