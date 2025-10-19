@@ -18,7 +18,6 @@ export interface UserDOStub {
   deleteChildProfile(profileId: string, userId: string): Promise<boolean>;
   saveStory(story: any): Promise<any>;
   getStory(storyId: string): Promise<any>;
-  getStoryByShareId(shareId: string): Promise<any>;
   getUserStories(userId: string, limit?: number): Promise<any[]>;
   updateStory(storyId: string, updates: any): Promise<any>;
   deleteStory(storyId: string, userId: string): Promise<boolean>;

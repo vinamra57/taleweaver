@@ -11,7 +11,6 @@ interface SavedStory {
   child_name: string;
   moral_focus: string;
   interactive: boolean;
-  is_shared: boolean;
   created_at: string;
   last_played_at: string;
 }
@@ -46,29 +45,6 @@ export const Dashboard: React.FC = () => {
       setError('Failed to load stories');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleShareStory = async (storyId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/api/stories/${storyId}/share`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Copy share URL to clipboard
-        await navigator.clipboard.writeText(data.share_url);
-        alert('Share link copied to clipboard!');
-        // Refresh stories to update is_shared status
-        fetchStories();
-      }
-    } catch (error) {
-      console.error('Failed to share story', error);
-      alert('Failed to create share link');
     }
   };
 
@@ -156,19 +132,6 @@ export const Dashboard: React.FC = () => {
                     >
                       Play Story
                     </button>
-                    {!story.is_shared && (
-                      <button
-                        onClick={() => handleShareStory(story.id)}
-                        className="btn-secondary w-full"
-                      >
-                        Share Story
-                      </button>
-                    )}
-                    {story.is_shared && (
-                      <p className="text-xs text-bedtime-purple text-center">
-                        Shared
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}

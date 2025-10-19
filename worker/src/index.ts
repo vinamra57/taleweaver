@@ -32,9 +32,7 @@ import {
   handleListStories,
   handleGetStory,
   handleSaveStory,
-  handleShareStory,
   handleDeleteStory,
-  handleGetSharedStory,
 } from './routes/user/stories';
 import { handleStoryEvaluation } from './routes/storyEvaluate';
 
@@ -73,8 +71,6 @@ app.get('/', (c) => {
       // Stories
       stories: 'GET/POST /api/stories',
       story: 'GET/DELETE /api/stories/:id',
-      shareStory: 'POST /api/stories/:id/share',
-      sharedStory: 'GET /api/stories/shared/:shareId',
       // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
@@ -125,13 +121,7 @@ app.delete('/api/profiles/:id', requireAuth, handleDeleteProfile);
 app.get('/api/stories', requireAuth, handleListStories);
 app.get('/api/stories/:id', requireAuth, handleGetStory);
 app.post('/api/stories/save', requireAuth, handleSaveStory);
-app.post('/api/stories/:id/share', requireAuth, handleShareStory);
 app.delete('/api/stories/:id', requireAuth, handleDeleteStory);
-
-// ============================================================================
-// Shared Story Route (Public)
-// ============================================================================
-app.get('/api/stories/shared/:shareId', handleGetSharedStory);
 
 // ============================================================================
 // Audio Serving
