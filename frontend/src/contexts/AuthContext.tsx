@@ -69,23 +69,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     confirmPassword: string
   ) => {
-    const response = await fetch(`${API_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, confirm_password: confirmPassword }),
-    });
+    try {
+      console.log('Signup API URL:', `${API_URL}/api/auth/signup`);
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, confirm_password: confirmPassword }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Signup failed');
-    }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Signup failed');
+      }
 
-    const data = await response.json();
-    setUser(data.user);
-    setAccessToken(data.access_token);
-    localStorage.setItem('access_token', data.access_token);
-    if (data.refresh_token) {
-      localStorage.setItem('refresh_token', data.refresh_token);
+      const data = await response.json();
+      setUser(data.user);
+      setAccessToken(data.access_token);
+      localStorage.setItem('access_token', data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      throw new Error(error.message || 'Network error - could not connect to server');
     }
   };
 
