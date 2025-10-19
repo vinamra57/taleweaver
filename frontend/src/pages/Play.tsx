@@ -191,6 +191,9 @@ export const Play: React.FC = () => {
           // Save to sessionStorage
           sessionStorage.setItem(STORY_SESSION_STORAGE_KEY, JSON.stringify(frontendSession));
           setSessionState(frontendSession);
+
+          // Mark as already saved since we loaded it from backend
+          setIsSaved(true);
         } catch (err: any) {
           console.error('Failed to load saved story', err);
           setError(err.message || 'Failed to load story');
