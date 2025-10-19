@@ -96,7 +96,7 @@ export const SongPlayer: React.FC<SongPlayerProps> = ({ session }) => {
           TaleWeaver
         </button>
         <p className="text-xl text-bedtime-purple-dark font-body">
-          {session.child.name}'s {session.song_type === 'song' ? 'Song' : 'Rhyme'}
+          {session.child_name}'s {session.song_type === 'song' ? 'Song' : 'Rhyme'}
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export const SongPlayer: React.FC<SongPlayerProps> = ({ session }) => {
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">{getThemeIcon()}</div>
             <h2 className="text-3xl font-display font-semibold text-bedtime-purple mb-2">
-              {session.child.name}'s {session.song_type === 'song' ? 'Song' : 'Rhyme'}
+              {session.child_name}'s {session.song_type === 'song' ? 'Song' : 'Rhyme'}
             </h2>
             <div className="flex gap-3 justify-center flex-wrap">
               <span className="px-4 py-2 rounded-full text-sm font-semibold bg-bedtime-purple-pale text-bedtime-purple">
@@ -158,13 +158,13 @@ export const SongPlayer: React.FC<SongPlayerProps> = ({ session }) => {
           </div>
 
           {/* Lyrics */}
-          {session.lyrics_text && (
+          {session.lyrics && (
             <div className="bg-white/50 rounded-2xl p-6">
               <h3 className="text-xl font-display font-semibold text-bedtime-purple mb-4 text-center">
                 Lyrics
               </h3>
               <div className="text-bedtime-purple-dark font-body text-lg leading-relaxed whitespace-pre-line text-center">
-                {session.lyrics_text}
+                {session.lyrics}
               </div>
             </div>
           )}

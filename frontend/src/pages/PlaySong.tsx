@@ -59,23 +59,26 @@ export const PlaySong: React.FC = () => {
     if (hasRequestedRef.current) return;
     hasRequestedRef.current = true;
 
+    // Extract request to maintain type narrowing in async function
+    const request = state.request;
+
     const generate = async () => {
       setIsGenerating(true);
       setError(null);
       try {
-        const response = await api.createSong(state.request);
+        const response = await api.createSong(request);
         const storedSession: StoredSongSession = {
           session_id: response.session_id,
-          child_name: state.request.child_name,
+          child_name: request.child_name,
           audio_url: response.audio_url,
           title: response.title,
           lyrics: response.lyrics,
           duration_seconds: response.duration_seconds,
-          song_type: state.request.song_type,
-          theme: state.request.theme,
-          moral_focus: state.request.moral_focus,
-          musical_style: state.request.musical_style,
-          voice_selection: state.request.voice_selection,
+          song_type: request.song_type,
+          theme: request.theme,
+          moral_focus: request.moral_focus,
+          musical_style: request.musical_style,
+          voice_selection: request.voice_selection,
           created_at: new Date().toISOString(),
         };
         sessionStorage.setItem(SONG_SESSION_STORAGE_KEY, JSON.stringify(storedSession));

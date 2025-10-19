@@ -12,12 +12,12 @@ import {
 import type { MoralFocus } from './types';
 
 // API Configuration
-// Prefer explicit env; fall back to common Wrangler dev origin when running Vite locally.
+// Prefer explicit env; fall back to production Worker URL
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   (typeof window !== 'undefined' && window.location.port === '5173'
     ? 'http://localhost:8787'
-    : '');
+    : 'https://taleweaver-worker.vinamra0305.workers.dev');
 
 export interface CharacterPreset {
   child: Child;

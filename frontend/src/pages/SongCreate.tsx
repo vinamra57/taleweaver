@@ -1,41 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SongForm } from '../components/SongForm';
-import { StoryLoadingState, ErrorState } from '../components/LoadingStates';
-import { StartSongRequest, StoredSongSession } from '../lib/types';
+import { SongRequest, StoredSongSession } from '../lib/types';
 import { SONG_SESSION_STORAGE_KEY } from '../lib/constants';
 import api from '../lib/api';
 
 export const SongCreate: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profileData, setProfileData] = useState<any>(null);
 
-  useEffect(() => {
-    // Check if profile data was passed from Profiles page
-    if (location.state?.profile) {
-      setProfileData(location.state.profile);
-    }
-  }, [location]);
-
-  const handleSubmit = async (request: StartSongRequest) => {
+  const handleSubmit = async (request: SongRequest) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await api.startSong(request);
+      const response = await api.createSong(request);
 
       const sessionToStore: StoredSongSession = {
         session_id: response.session_id,
-        child: request.child,
+        child_name: request.child_name,
+        audio_url: response.audio_url,
+        title: response.title,
+        lyrics: response.lyrics,
+        duration_seconds: response.duration_seconds,
         song_type: request.song_type,
         theme: request.theme,
         moral_focus: request.moral_focus,
-        song_length: request.song_length,
-        audio_url: response.audio_url,
-        lyrics_text: response.lyrics_text,
+        musical_style: request.musical_style,
+        voice_selection: request.voice_selection,
+        created_at: new Date().toISOString(),
       };
 
       sessionStorage.setItem(
@@ -43,32 +37,31 @@ export const SongCreate: React.FC = () => {
         JSON.stringify(sessionToStore),
       );
 
-      navigate('/play');
+      navigate('/play-song');
     } catch (err: any) {
       setError(err.message || 'Failed to create song. Please try again.');
       setIsLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    setError(null);
-  };
-
   if (error) {
-    return <ErrorState message={error} onRetry={handleRetry} />;
+    return (
+      <div className="container-bedtime min-h-screen flex flex-col items-center justify-center gap-6 text-center">
+        <div className="text-6xl">😔</div>
+        <h2 className="text-3xl font-display text-bedtime-purple">Oops!</h2>
+        <p className="text-bedtime-purple-dark font-body">{error}</p>
+        <button onClick={() => setError(null)} className="btn-primary">Try Again</button>
+      </div>
+    );
   }
 
   if (isLoading) {
     return (
-      <StoryLoadingState
-        messages={[
-          'Composing your magical song...',
-          'Gathering musical notes...',
-          'Adding melody and rhythm...',
-          'Creating beautiful lyrics...',
-          'Sprinkling song magic...',
-        ]}
-      />
+      <div className="container-bedtime min-h-screen flex flex-col items-center justify-center gap-6 text-center">
+        <div className="text-6xl">🎵</div>
+        <h2 className="text-3xl font-display text-bedtime-purple">Composing your magical song...</h2>
+        <div className="spinner" />
+      </div>
     );
   }
 
@@ -99,7 +92,7 @@ export const SongCreate: React.FC = () => {
       </div>
 
       {/* Song form */}
-      <SongForm onSubmit={handleSubmit} isLoading={isLoading} profileData={profileData} />
+      <SongForm onSubmit={handleSubmit} isLoading={isLoading} />
 
       {/* Footer */}
       <div className="text-center mt-12 pb-8">
