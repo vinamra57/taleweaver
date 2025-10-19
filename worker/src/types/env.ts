@@ -1,3 +1,5 @@
+import type { DurableObjectNamespace } from '@cloudflare/workers-types';
+
 /**
  * Cloudflare Worker Environment Bindings
  * This interface defines all environment variables, secrets, and bindings available to the worker
@@ -12,10 +14,14 @@ export interface Env {
   // Workers AI binding
   AI: Ai;
 
+  // Durable Object Namespaces
+  USER_DO: DurableObjectNamespace;
+
   // Secrets (set via wrangler secret put)
   GEMINI_API_KEY: string;
   ELEVENLABS_API_KEY: string;
   ELEVENLABS_VOICE_ID: string;
+  JWT_SECRET: string; // Secret for JWT signing
 
   // Environment variables
   ELEVENLABS_MODEL_ID: string;

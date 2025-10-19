@@ -24,7 +24,19 @@ preview_bucket_name = "taleweaver-audio-dev"
 [ai]
 binding = "AI"
 
-# Secrets (set via: wrangler secret put GEMINI_API_KEY)
+# Durable Object bindings
+[[durable_objects.bindings]]
+name = "USER_DO"
+class_name = "UserDO"
+script_name = "taleweaver-worker"
+
+# Durable Object migrations
+[[migrations]]
+tag = "v1"
+new_classes = ["UserDO"]
+
+# Secrets (set via: wrangler secret put <SECRET_NAME>)
 # GEMINI_API_KEY
 # ELEVENLABS_API_KEY
 # ELEVENLABS_VOICE_ID
+# JWT_SECRET (generate with: openssl rand -base64 64)

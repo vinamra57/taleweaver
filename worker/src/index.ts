@@ -12,6 +12,32 @@ import { getAudio } from './services/r2';
 import { TaleWeaverError } from './utils/errors';
 import { createLogger } from './utils/logger';
 
+// Auth routes
+import { handleSignup } from './routes/auth/signup';
+import { handleLogin } from './routes/auth/login';
+import { handleChangePassword } from './routes/auth/changePassword';
+
+// User routes
+import { handleGetMe, handleUpdateMe } from './routes/user/profile';
+import {
+  handleListProfiles,
+  handleCreateProfile,
+  handleGetProfile,
+  handleUpdateProfile,
+  handleDeleteProfile,
+} from './routes/user/childProfiles';
+import {
+  handleListStories,
+  handleGetStory,
+  handleSaveStory,
+  handleShareStory,
+  handleDeleteStory,
+  handleGetSharedStory,
+} from './routes/user/stories';
+
+// Auth middleware
+import { requireAuth, optionalAuth } from './auth/middleware';
+
 const logger = createLogger('Main');
 
 // Create Hono app
@@ -20,29 +46,87 @@ const app = new Hono<{ Bindings: Env }>();
 // CORS middleware - allow all origins for hackathon (tighten for production)
 app.use('*', cors({
   origin: '*',
-  allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type'],
+  allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Health check endpoint
 app.get('/', (c) => {
   return c.json({
     service: 'TaleWeaver API',
-    version: '1.0.0',
+    version: '2.0.0',
     status: 'running',
     endpoints: {
+      // Auth
+      signup: 'POST /api/auth/signup',
+      login: 'POST /api/auth/login',
+      changePassword: 'POST /api/auth/change-password',
+      // User
+      me: 'GET /api/user/me',
+      updateMe: 'PATCH /api/user/me',
+      // Profiles
+      profiles: 'GET/POST /api/profiles',
+      profile: 'GET/PATCH/DELETE /api/profiles/:id',
+      // Stories
+      stories: 'GET/POST /api/stories',
+      story: 'GET/DELETE /api/stories/:id',
+      shareStory: 'POST /api/stories/:id/share',
+      sharedStory: 'GET /api/stories/shared/:shareId',
+      // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
-      audio: 'GET /audio/:sessionId/:sceneId.mp3',
+      audio: 'GET /audio/:sessionId/:sceneId',
     },
   });
 });
 
-// API Routes
-app.post('/api/story/start', handleStoryStart);
-app.post('/api/story/continue', handleStoryContinue);
+// ============================================================================
+// Auth Routes
+// ============================================================================
+app.post('/api/auth/signup', handleSignup);
+app.post('/api/auth/login', handleLogin);
+app.post('/api/auth/change-password', requireAuth, handleChangePassword);
 
-// Audio proxy endpoint (for serving R2 audio files)
+// ============================================================================
+// User Routes (Protected)
+// ============================================================================
+app.get('/api/user/me', requireAuth, handleGetMe);
+app.patch('/api/user/me', requireAuth, handleUpdateMe);
+
+// ============================================================================
+// Child Profile Routes (Protected)
+// ============================================================================
+app.get('/api/profiles', requireAuth, handleListProfiles);
+app.post('/api/profiles', requireAuth, handleCreateProfile);
+app.get('/api/profiles/:id', requireAuth, handleGetProfile);
+app.patch('/api/profiles/:id', requireAuth, handleUpdateProfile);
+app.delete('/api/profiles/:id', requireAuth, handleDeleteProfile);
+
+// ============================================================================
+// Story History Routes (Protected)
+// ============================================================================
+app.get('/api/stories', requireAuth, handleListStories);
+app.get('/api/stories/:id', requireAuth, handleGetStory);
+app.post('/api/stories/save', requireAuth, handleSaveStory);
+app.post('/api/stories/:id/share', requireAuth, handleShareStory);
+app.delete('/api/stories/:id', requireAuth, handleDeleteStory);
+
+// ============================================================================
+// Shared Story Route (Public)
+// ============================================================================
+app.get('/api/stories/shared/:shareId', handleGetSharedStory);
+
+// ============================================================================
+// Story Generation Routes (Optional Auth)
+// ============================================================================
+// These routes work with or without authentication
+// If authenticated, stories can be saved to user account
+app.post('/api/story/start', optionalAuth, handleStoryStart);
+app.post('/api/story/continue', optionalAuth, handleStoryContinue);
+
+// ============================================================================
+// Audio Serving
+// ============================================================================
 app.get('/audio/:sessionId/:sceneId', async (c) => {
   try {
     const sessionId = c.req.param('sessionId');
@@ -68,6 +152,10 @@ app.get('/audio/:sessionId/:sceneId', async (c) => {
     return c.json({ error: 'Failed to serve audio' }, 500);
   }
 });
+
+// ============================================================================
+// Error Handlers
+// ============================================================================
 
 // Global error handler
 app.onError((err, c) => {
@@ -104,4 +192,8 @@ app.notFound((c) => {
   );
 });
 
+// Export Hono app as default export
 export default app;
+
+// Export Durable Objects
+export { UserDO } from './durable-objects/UserDO';
