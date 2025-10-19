@@ -383,10 +383,10 @@ export const Play: React.FC = () => {
     }
 
     // Only set src if it's a different audio file
-    if (audioEl.src !== audioUrl) {
+    if (currentPlayingUrl !== audioUrl) {
       audioEl.src = audioUrl;
-      setCurrentPlayingUrl(audioUrl);
     }
+    setCurrentPlayingUrl(audioUrl);
 
     audioEl.play().catch(() => null);
   };
@@ -669,7 +669,7 @@ export const Play: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => playAudio(currentInteractiveEntry.segment.audio_url)}
-                  disabled={currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying}
+                  disabled={isPlaying && currentPlayingUrl === currentInteractiveEntry.segment.audio_url}
                   className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Play narration"
                 >
@@ -677,7 +677,7 @@ export const Play: React.FC = () => {
                 </button>
                 <button
                   onClick={pauseAudio}
-                  disabled={!(currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying)}
+                  disabled={!isPlaying || currentPlayingUrl !== currentInteractiveEntry.segment.audio_url}
                   className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Pause narration"
                 >
