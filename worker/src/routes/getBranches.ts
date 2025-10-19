@@ -54,16 +54,15 @@ export async function handleGetBranches(c: Context): Promise<Response> {
     }
 
     // Reconstruct branches from segments
-    // Note: Frontend expects 'id' and 'label' fields
-    const branches = [
+    const branches: StoryBranch[] = [
       {
-        id: 'A' as const,
-        label: segmentA.choice_text || 'Choice A',
+        choice_value: 'A' as const,
+        choice_text: segmentA.choice_text || 'Choice A',
         segment: segmentA,
       },
       {
-        id: 'B' as const,
-        label: segmentB.choice_text || 'Choice B',
+        choice_value: 'B' as const,
+        choice_text: segmentB.choice_text || 'Choice B',
         segment: segmentB,
       },
     ];

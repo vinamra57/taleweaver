@@ -4,7 +4,7 @@
  */
 
 import type { Env } from '../types/env';
-import type { Session, StoryBranch } from '../schemas/story';
+import type { Session } from '../schemas/story';
 import { generateFirstSegment, generateContinuation } from './gemini';
 import { createBranchesInParallel } from './branchOrchestrator';
 import { getSession, saveSession } from './kv';

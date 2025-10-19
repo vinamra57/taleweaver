@@ -130,7 +130,7 @@ function extractEvaluationJSON(text: string): unknown {
  * Build evaluation prompt for Gemini
  */
 function buildEvaluationPrompt(request: EvaluationRequest): string {
-  const { child, moral_focus, story_history, ending_reflection } = request;
+  const { child, moral_focus, story_history } = request;
 
   const choicesText = story_history
     .filter(entry => entry.chosen_option)
@@ -138,10 +138,6 @@ function buildEvaluationPrompt(request: EvaluationRequest): string {
       `Choice ${index + 1}: "${entry.chosen_option}" (led to: ${entry.segment_text.substring(0, 100)}...)`
     )
     .join('\n');
-
-  const storyContext = story_history
-    .map(entry => `Segment ${entry.checkpoint_index}: ${entry.segment_text}`)
-    .join('\n\n');
 
   return `You are a child development expert. Analyze the following interactive story session and provide a brief, positive evaluation.
 

@@ -316,14 +316,14 @@ export const Play: React.FC = () => {
           // Branches are ready! Update the session state with them
           console.log('[Polling] ✅ Branches fetched and ready!', branchesData.branches);
 
-          const nextOptions = branchesData.branches.slice(0, 2).map((br, i) => ({
-            id: (br.id ?? (['A', 'B'] as const)[i]) as ChoiceId,
-            label: br.label ?? ((['A', 'B'] as const)[i] === 'A' ? 'Choice A' : 'Choice B'),
+          const nextOptions = branchesData.branches.slice(0, 2).map((br) => ({
+            id: br.choice_value,
+            label: br.choice_text,
             segment: {
               from_checkpoint: currentCheckpoint,
               to_checkpoint: nextCheckpoint,
               text: br.segment.text,
-              emotion_hint: br.segment.emotion_hint ?? 'warm', // Default to 'warm' if not provided
+              emotion_hint: br.segment.emotion_hint ?? 'warm',
               audio_url: br.segment.audio_url,
             },
           }));

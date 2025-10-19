@@ -20,9 +20,8 @@ type BackendSegment = {
 };
 
 type BackendBranch = {
-  id?: 'A' | 'B';         // if present
-  label?: string;         // human text
-  // the next segment if this choice is selected:
+  choice_value: 'A' | 'B';
+  choice_text: string;
   segment: BackendSegment;
 };
 
@@ -64,13 +63,10 @@ function asChoiceOptionsFromBranches(
   from: number,
   to: number
 ): ChoiceOption[] {
-  const ids: ('A'|'B')[] = ['A', 'B'];
-  return branches.slice(0, 2).map((br, i) => ({
-    id: (br.id ?? ids[i]),
-    label: br.label ?? (ids[i] === 'A' ? 'Choice A' : 'Choice B'),
+  return branches.slice(0, 2).map((br) => ({
+    id: br.choice_value,
+    label: br.choice_text,
     segment: {
-      // we only need emotion + audio for preview UI;
-      // from/to used for the visual hint
       from_checkpoint: from,
       to_checkpoint: to,
       text: br.segment.text,
