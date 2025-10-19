@@ -117,6 +117,7 @@ export const Home: React.FC = () => {
             >
               <span role="img" aria-label="music">🎵</span>
               <span>Compose a Song</span>
+              <span role="img" aria-label="music">🎵</span>
             </button>
           </div>
         </div>
