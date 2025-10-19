@@ -384,66 +384,38 @@ export const Play: React.FC = () => {
     };
   }, []);
 
-  // Play audio from the beginning - always restarts
-  const playFromBeginning = (audioUrl: string) => {
+  const playAudio = (audioUrl: string) => {
     const audioEl = audioRef.current;
     if (!audioEl) {
       return;
     }
 
-    // Always set source and reset time to ensure restart from beginning
-    audioEl.src = audioUrl;
-    audioEl.currentTime = 0;
-    setCurrentPlayingUrl(audioUrl);
-    setAudioError(null);
+    // Only set src if it's a different audio file
+    if (audioEl.src !== audioUrl) {
+      audioEl.src = audioUrl;
+      setCurrentPlayingUrl(audioUrl);
+    }
 
+    setAudioError(null);
     audioEl.play().catch((err) => {
       console.error('Audio playback failed:', err);
       setAudioError('Unable to play audio. Please try again.');
-      setCurrentPlayingUrl(null);
     });
   };
 
-  // Toggle between pause and resume for current audio
-  const togglePauseResume = () => {
-    const audioEl = audioRef.current;
-    if (!audioEl || !audioEl.src) {
-      return;
-    }
-
-    if (isPlaying) {
-      audioEl.pause();
-    } else {
-      setAudioError(null);
-      audioEl.play().catch((err) => {
-        console.error('Audio playback failed:', err);
-        setAudioError('Unable to play audio. Please try again.');
-      });
-    }
-  };
-
-  // Legacy function for previous entries and non-interactive segments
-  const toggleAudio = (audioUrl: string) => {
+  const pauseAudio = () => {
     const audioEl = audioRef.current;
     if (!audioEl) {
       return;
     }
+    audioEl.pause();
+  };
 
-    // If it's the same audio and playing, pause it
+  const toggleAudio = (audioUrl: string) => {
     if (currentPlayingUrl === audioUrl && isPlaying) {
-      audioEl.pause();
+      pauseAudio();
     } else {
-      // Otherwise, play from beginning
-      audioEl.src = audioUrl;
-      audioEl.currentTime = 0;
-      setCurrentPlayingUrl(audioUrl);
-      setAudioError(null);
-
-      audioEl.play().catch((err) => {
-        console.error('Audio playback failed:', err);
-        setAudioError('Unable to play audio. Please try again.');
-        setCurrentPlayingUrl(null);
-      });
+      playAudio(audioUrl);
     }
   };
 
@@ -715,21 +687,19 @@ export const Play: React.FC = () => {
             <div className="flex items-center gap-4 p-4 bg-bedtime-purple-pale/30 rounded-xl">
               <div className="flex gap-2">
                 <button
-                  onClick={() => playFromBeginning(currentInteractiveEntry.segment.audio_url)}
+                  onClick={() => playAudio(currentInteractiveEntry.segment.audio_url)}
                   className="w-12 h-12 rounded-full bg-bedtime-yellow text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform"
-                  aria-label="Play from beginning"
-                  title="Play from beginning"
+                  aria-label="Play narration"
                 >
                   ▶
                 </button>
                 <button
-                  onClick={togglePauseResume}
-                  disabled={!currentPlayingUrl || currentPlayingUrl !== currentInteractiveEntry.segment.audio_url}
+                  onClick={pauseAudio}
+                  disabled={!(currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying)}
                   className="w-12 h-12 rounded-full bg-bedtime-purple text-white flex items-center justify-center text-2xl hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label={isPlaying ? "Pause" : "Resume"}
-                  title={isPlaying ? "Pause" : "Resume"}
+                  aria-label="Pause narration"
                 >
-                  {isPlaying ? '⏸' : '▶'}
+                  ⏸
                 </button>
               </div>
               <div className="flex-1">
@@ -739,9 +709,7 @@ export const Play: React.FC = () => {
                 <p className="text-xs text-bedtime-purple/60">
                   {currentPlayingUrl === currentInteractiveEntry.segment.audio_url && isPlaying
                     ? 'Playing...'
-                    : currentPlayingUrl === currentInteractiveEntry.segment.audio_url && !isPlaying
-                    ? 'Paused - Click resume to continue'
-                    : 'Click play to start'}
+                    : 'Tap to hear the narrated version'}
                 </p>
               </div>
               <div className="text-xs text-bedtime-purple/60 font-semibold uppercase tracking-wide">
