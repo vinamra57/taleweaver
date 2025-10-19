@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { StoryLoadingState, ErrorState } from '../components/LoadingStates';
 import {
   ChoiceId,
@@ -10,6 +11,8 @@ import {
 } from '../lib/types';
 import { STORY_SESSION_STORAGE_KEY } from '../lib/constants';
 import api from '../lib/api';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
 
 const emotionLabels: Record<EmotionHint, string> = {
   warm: 'Warm',
@@ -22,10 +25,12 @@ const formatEmotion = (emotion: EmotionHint) => emotionLabels[emotion] || emotio
 
 export const Play: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, accessToken } = useAuth();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [sessionState, setSessionState] = useState<StoredStorySession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Restore story session from storage
   useEffect(() => {
@@ -242,6 +247,43 @@ export const Play: React.FC = () => {
     navigate('/create');
   };
 
+  const handleSaveStory = async () => {
+    if (!sessionState || !isAuthenticated) {
+      return;
+    }
+
+    // Prompt user for a title
+    const title = prompt('Enter a title for this story:');
+    if (!title || title.trim() === '') {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/stories/save`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionState.session_id,
+          title: title.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        setIsSaved(true);
+        alert('Story saved successfully!');
+      } else {
+        const errorData = await response.json();
+        alert('Failed to save story: ' + (errorData.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Failed to save story', error);
+      alert('Failed to save story');
+    }
+  };
+
   const handleRetry = () => {
     setError(null);
   };
@@ -446,9 +488,30 @@ export const Play: React.FC = () => {
       )}
 
       <div className="mt-8 pb-8 text-center">
-        <button onClick={handleStartNewStory} className="btn-secondary">
-          Start New Story
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {isAuthenticated && !isSaved && (
+            <button onClick={handleSaveStory} className="btn-primary">
+              Save This Story
+            </button>
+          )}
+          {isSaved && (
+            <p className="text-bedtime-purple font-body">Story saved!</p>
+          )}
+          <button onClick={handleStartNewStory} className="btn-secondary">
+            Start New Story
+          </button>
+        </div>
+        {!isAuthenticated && (
+          <p className="text-bedtime-purple/60 text-sm mt-4">
+            <button
+              onClick={() => navigate('/login')}
+              className="text-bedtime-purple hover:underline"
+            >
+              Sign in
+            </button>
+            {' '}to save your stories
+          </p>
+        )}
       </div>
     </div>
   );

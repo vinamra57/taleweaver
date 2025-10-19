@@ -155,6 +155,15 @@ const apiClient = axios.create({
   timeout: 60000,
 });
 
+// Add auth token to requests if available
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const api = {
   /**
    * Start a new story session

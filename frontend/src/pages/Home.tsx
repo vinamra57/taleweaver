@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   DinoIllustration,
   RocketIllustration,
@@ -16,6 +17,7 @@ import {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -52,6 +54,36 @@ export const Home: React.FC = () => {
       </div>
 
       <div className="container-bedtime relative z-10">
+        {/* Auth buttons in header */}
+        <div className="pt-4 flex justify-end gap-4">
+          {isAuthenticated ? (
+            <>
+              <span className="text-bedtime-purple font-body self-center">Hello, {user?.name}</span>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="btn-secondary"
+              >
+                Dashboard
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/login')}
+                className="btn-secondary"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/signup')}
+                className="btn-primary"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
+        </div>
+
         {/* Hero Section */}
         <div className="text-center pt-20 pb-16">
           <div className="mb-8 flex justify-center">

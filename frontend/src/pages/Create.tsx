@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { StoryForm } from '../components/StoryForm';
 import { StoryLoadingState, ErrorState } from '../components/LoadingStates';
 import { StartRequest, StoredStorySession } from '../lib/types';
@@ -8,14 +8,20 @@ import api from '../lib/api';
 
 export const Create: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [presetKey, setPresetKey] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
     setPresetKey(searchParams.get('preset'));
-  }, [searchParams]);
+    // Check if profile data was passed from Profiles page
+    if (location.state?.profile) {
+      setProfileData(location.state.profile);
+    }
+  }, [searchParams, location]);
 
   const handleSubmit = async (request: StartRequest) => {
     setIsLoading(true);
@@ -93,7 +99,7 @@ export const Create: React.FC = () => {
       </div>
 
       {/* Story form */}
-      <StoryForm onSubmit={handleSubmit} isLoading={isLoading} presetKey={presetKey} />
+      <StoryForm onSubmit={handleSubmit} isLoading={isLoading} presetKey={presetKey} profileData={profileData} />
 
       {/* Footer */}
       <div className="text-center mt-12 pb-8">

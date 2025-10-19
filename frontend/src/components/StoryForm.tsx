@@ -25,6 +25,7 @@ interface StoryFormProps {
   onSubmit: (request: StartRequest) => void;
   isLoading?: boolean;
   presetKey?: string | null;
+  profileData?: any;
 }
 
 type ChildFormState = Omit<Child, 'context'> & { context: string };
@@ -76,6 +77,7 @@ export const StoryForm: React.FC<StoryFormProps> = ({
   onSubmit,
   isLoading = false,
   presetKey = null,
+  profileData = null,
 }) => {
   const [formData, setFormData] = useState<ChildFormState>(() => createDefaultChildState());
   const [durationMin, setDurationMin] = useState<DurationMin>(DEFAULT_DURATION_MIN);
@@ -124,6 +126,26 @@ export const StoryForm: React.FC<StoryFormProps> = ({
       applyPreset(presetKey);
     }
   }, [presetKey]);
+
+  useEffect(() => {
+    if (profileData) {
+      // Convert profile data from backend format to form format
+      const interests = profileData.interests
+        ? profileData.interests.split(',').map((i: string) => i.trim())
+        : [];
+
+      setFormData({
+        name: profileData.name || '',
+        gender: profileData.gender || DEFAULT_GENDER,
+        age_group: profileData.age_range || DEFAULT_AGE_GROUP,
+        interests: interests,
+        context: profileData.context || '',
+      });
+      setErrors({});
+      setCustomInterest('');
+      setActivePresetKey(null);
+    }
+  }, [profileData]);
 
   const handleInterestToggle = (interest: string) => {
     markCustom();
