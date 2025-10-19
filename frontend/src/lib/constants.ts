@@ -114,7 +114,7 @@ export const SONG_SESSION_STORAGE_KEY = 'taleweaver.songSession';
 
 // Voice Narrator Options
 export interface VoiceOption {
-  id: 'custom' | PresetVoice;
+  id: 'custom' | 'clone' | PresetVoice;
   name: string;
   icon: string;
   description: string;
@@ -126,6 +126,12 @@ export const VOICE_OPTIONS: VoiceOption[] = [
     name: 'Custom Voice',
     icon: '✨',
     description: 'AI-generated voice tailored to your story theme',
+  },
+  {
+    id: 'clone',
+    name: 'Clone Your Voice',
+    icon: '🎤',
+    description: 'Record or upload your voice for personalized narration',
   },
   {
     id: 'princess',

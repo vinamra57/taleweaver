@@ -171,6 +171,7 @@ export const Play: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState<string | null>(null);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   // Load story from saved story or session storage
   useEffect(() => {
@@ -284,7 +285,11 @@ export const Play: React.FC = () => {
       audioEl.src = firstNonInteractiveAudioUrl;
     }
 
-    audioEl.play().catch(() => null);
+    audioEl.play().catch((err) => {
+      // Browser may block auto-play, log for debugging but don't show error to user
+      console.warn('Audio auto-play blocked:', err);
+      setAudioError('Click the play button to start audio');
+    });
   }, [isInteractiveMode, interactiveAudioUrl, firstNonInteractiveAudioUrl]);
 
   // Poll for branch readiness when next_options is empty
@@ -373,6 +378,9 @@ export const Play: React.FC = () => {
       audioEl.removeEventListener('play', handlePlay);
       audioEl.removeEventListener('pause', handlePause);
       audioEl.removeEventListener('ended', handleEnded);
+      // Cleanup: pause and clear audio on component unmount
+      audioEl.pause();
+      audioEl.src = '';
     };
   }, []);
 
@@ -388,7 +396,11 @@ export const Play: React.FC = () => {
     }
     setCurrentPlayingUrl(audioUrl);
 
-    audioEl.play().catch(() => null);
+    setAudioError(null);
+    audioEl.play().catch((err) => {
+      console.error('Audio playback failed:', err);
+      setAudioError('Unable to play audio. Please try again.');
+    });
   };
 
   const pauseAudio = () => {
@@ -585,6 +597,13 @@ export const Play: React.FC = () => {
           Dashboard
         </button>
       </div>
+
+      {/* Audio error message */}
+      {audioError && (
+        <div className="max-w-2xl mx-auto mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
+          {audioError}
+        </div>
+      )}
 
       <div className="text-center mb-8 pt-8">
         <button

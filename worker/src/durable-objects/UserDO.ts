@@ -9,6 +9,7 @@ import type {
   ChildProfile,
   SavedStory,
   Session,
+  ClonedVoice,
 } from '../schemas/auth/user';
 import type { SavedSong } from '../schemas/auth/user';
 
@@ -27,6 +28,8 @@ export interface UserDOEnv {
  * - songs:user:{userId} -> string[] (song IDs)
  * - session:{sessionId} -> Session
  * - email_index:{email} -> userId (for lookup)
+ * - cloned_voice:{voiceId} -> ClonedVoice
+ * - cloned_voices:user:{userId} -> string[] (voice IDs)
  */
 
 export class UserDO extends DurableObject {
@@ -274,6 +277,55 @@ export class UserDO extends DurableObject {
 
   async deleteSession(sessionId: string): Promise<boolean> {
     await this.ctx.storage.delete(`session:${sessionId}`);
+    return true;
+  }
+
+  // ============================================================================
+  // Cloned Voice Management
+  // ============================================================================
+
+  async createClonedVoice(voice: ClonedVoice): Promise<ClonedVoice> {
+    await this.ctx.storage.put(`cloned_voice:${voice.id}`, voice);
+
+    // Add to user's voice list
+    const userVoiceIds =
+      (await this.ctx.storage.get<string[]>(`cloned_voices:user:${voice.user_id}`)) || [];
+    userVoiceIds.unshift(voice.id); // Add to beginning (most recent first)
+    await this.ctx.storage.put(`cloned_voices:user:${voice.user_id}`, userVoiceIds);
+
+    return voice;
+  }
+
+  async getClonedVoice(voiceId: string): Promise<ClonedVoice | null> {
+    return (await this.ctx.storage.get<ClonedVoice>(`cloned_voice:${voiceId}`)) || null;
+  }
+
+  async getUserClonedVoices(userId: string): Promise<ClonedVoice[]> {
+    const voiceIds =
+      (await this.ctx.storage.get<string[]>(`cloned_voices:user:${userId}`)) || [];
+    const voices: ClonedVoice[] = [];
+
+    for (const voiceId of voiceIds) {
+      const voice = await this.getClonedVoice(voiceId);
+      if (voice) voices.push(voice);
+    }
+
+    return voices;
+  }
+
+  async deleteClonedVoice(voiceId: string, userId: string): Promise<boolean> {
+    const voice = await this.getClonedVoice(voiceId);
+    if (!voice || voice.user_id !== userId) return false;
+
+    // Remove from storage
+    await this.ctx.storage.delete(`cloned_voice:${voiceId}`);
+
+    // Remove from user's voice list
+    const voiceIds =
+      (await this.ctx.storage.get<string[]>(`cloned_voices:user:${userId}`)) || [];
+    const updatedIds = voiceIds.filter((id) => id !== voiceId);
+    await this.ctx.storage.put(`cloned_voices:user:${userId}`, updatedIds);
+
     return true;
   }
 }

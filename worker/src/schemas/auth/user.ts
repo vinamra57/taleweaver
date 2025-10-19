@@ -80,6 +80,20 @@ export const SavedSongSchema = z.object({
 export type SavedSong = z.infer<typeof SavedSongSchema>;
 
 // ============================================================================
+// Cloned Voice Schema
+// ============================================================================
+
+export const ClonedVoiceSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  voice_id: z.string(), // ElevenLabs voice ID
+  name: z.string().min(1).max(100),
+  created_at: z.string().datetime(),
+});
+
+export type ClonedVoice = z.infer<typeof ClonedVoiceSchema>;
+
+// ============================================================================
 // Session Schema (for JWT sessions)
 // ============================================================================
 
@@ -174,3 +188,17 @@ export const SaveSongRequestSchema = z.object({
 });
 
 export type SaveSongRequest = z.infer<typeof SaveSongRequestSchema>;
+
+// Clone Voice Request
+export const CloneVoiceRequestSchema = z.object({
+  name: z.string().min(1, 'Voice name is required').max(100, 'Name too long'),
+});
+
+export type CloneVoiceRequest = z.infer<typeof CloneVoiceRequestSchema>;
+
+// Clone Voice Response
+export const CloneVoiceResponseSchema = z.object({
+  voice: ClonedVoiceSchema,
+});
+
+export type CloneVoiceResponse = z.infer<typeof CloneVoiceResponseSchema>;

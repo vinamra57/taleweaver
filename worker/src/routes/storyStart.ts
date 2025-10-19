@@ -90,7 +90,12 @@ export async function handleStoryStart(c: Context): Promise<Response> {
     let finalVoiceId: string;
     let finalVoiceDescription: string | undefined;
 
-    if (voiceSelection === 'custom') {
+    if (voiceSelection.startsWith('cloned:')) {
+      // Cloned voice: Extract voice ID from format "cloned:{voice_id}"
+      finalVoiceId = voiceSelection.substring(7); // Remove "cloned:" prefix
+      finalVoiceDescription = 'User cloned voice';
+      logger.info('Using cloned voice', { voiceId: finalVoiceId });
+    } else if (voiceSelection === 'custom') {
       // Custom voice: Generate voice from description
       logger.info('Using custom voice generation');
       finalVoiceId = await generateVoiceFromDescription(voiceDescription, env);

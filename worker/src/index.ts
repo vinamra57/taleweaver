@@ -40,6 +40,11 @@ import {
   handleSaveSong,
   handleDeleteSong,
 } from './routes/user/songs';
+import {
+  handleCloneVoice,
+  handleListClonedVoices,
+  handleDeleteClonedVoice,
+} from './routes/user/clonedVoices';
 import { handleStoryEvaluation } from './routes/storyEvaluate';
 import { handleSongCreate } from './routes/songCreate';
 
@@ -80,6 +85,10 @@ app.get('/', (c) => {
       story: 'GET/DELETE /api/stories/:id',
       songs: 'GET/POST /api/songs',
       song: 'GET/DELETE /api/songs/:id',
+      // Cloned Voices
+      cloneVoice: 'POST /api/voices/clone',
+      clonedVoices: 'GET /api/voices/cloned',
+      deleteClonedVoice: 'DELETE /api/voices/cloned/:id',
       // Story Generation
       start: 'POST /api/story/start',
       continue: 'POST /api/story/continue',
@@ -133,10 +142,21 @@ app.get('/api/stories', requireAuth, handleListStories);
 app.get('/api/stories/:id', requireAuth, handleGetStory);
 app.post('/api/stories/save', requireAuth, handleSaveStory);
 app.delete('/api/stories/:id', requireAuth, handleDeleteStory);
+
+// ============================================================================
+// Song History Routes (Protected)
+// ============================================================================
 app.get('/api/songs', requireAuth, handleListSongs);
 app.get('/api/songs/:id', requireAuth, handleGetSong);
 app.post('/api/songs/save', requireAuth, handleSaveSong);
 app.delete('/api/songs/:id', requireAuth, handleDeleteSong);
+
+// ============================================================================
+// Cloned Voice Routes (Protected)
+// ============================================================================
+app.post('/api/voices/clone', requireAuth, handleCloneVoice);
+app.get('/api/voices/cloned', requireAuth, handleListClonedVoices);
+app.delete('/api/voices/cloned/:id', requireAuth, handleDeleteClonedVoice);
 
 // ============================================================================
 // Audio Serving
